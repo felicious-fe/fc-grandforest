@@ -1,5 +1,4 @@
 import pickle
-from time import sleep
 import queue as q
 import redis
 import rq

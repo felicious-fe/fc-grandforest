@@ -3,6 +3,7 @@ import rq
 from flask import Blueprint, current_app, render_template, request
 from fc_server.api import local_mean, next_step, redis_get, redis_set
 
+
 r = redis.Redis(host='localhost', port=6379, db=0)
 tasks = rq.Queue('fc_tasks', connection=r)
 web_bp = Blueprint('web', __name__)
@@ -45,7 +46,6 @@ def params():
     global_data = redis_get('global_data')
     data = redis_get('data')
     available = redis_get('available')
-
     return f"""
         master: {master}
         step: {step}
@@ -72,20 +72,19 @@ def run():
     elif cur_step == 'setup':
         current_app.logger.info('[WEB] POST request to /run in step "setup" -> read data')
         current_app.logger.info('[WEB] Upload file')
-        data = []
         if 'file' in request.files:
             file = request.files['file']
             file_data = file.read().decode("latin-1")
             data = list(map(int, file_data.strip().split(',')))
+            current_app.logger.info(f'[WEB] data: {data}')
+            redis_set('data', data)
+            current_app.logger.info('[WEB] File successfully uploaded and processed')
+            next_step()
+            local_mean()
+            return 'Calculating results. Please wait...'
         else:
             current_app.logger.info('[WEB] No File was uploaded')
             return 'Empty file...'
-        current_app.logger.info(f'[WEB] data: {data}')
-        redis_set('data', data)
-        current_app.logger.info('[WEB] File successfully uploaded and processed')
-        next_step()
-        local_mean()
-        return 'Calculating results. Please wait...'
     elif cur_step == 'final':
         current_app.logger.info('[WEB] POST request to /run in step "final" -> GET request to "/"')
         # TODO weiterleitung zu route /
