@@ -1,4 +1,4 @@
-FROM fc_template:latest
+FROM fc_template_flask:latest
 
 COPY . /app/fc_server
 
