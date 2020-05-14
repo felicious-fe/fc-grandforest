@@ -1,7 +1,7 @@
 import redis
 import rq
 from flask import Blueprint, current_app, render_template, request
-from fc_server.api import local_mean, next_step, redis_get, redis_set
+from fc_app.api import local_mean, next_step, redis_get, redis_set
 
 
 r = redis.Redis(host='localhost', port=6379, db=0)
