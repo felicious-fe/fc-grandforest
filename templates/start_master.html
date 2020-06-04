@@ -19,13 +19,6 @@
 
 <form action="run" method="post" enctype=multipart/form-data>
     <div class="form-group" style="width: 50%">
-        <h3 style="margin-bottom: 15px">Criteria for File Upload </h3>
-        <ul>
-            <li>Duration Column has to be named: {{duration_col}} </li>
-            <li>Event Column has to be named: {{event_col}} </li>
-            <li>Covariates have to be named: {{covariates}}</li>
-        </ul>
-
         <h3 style="margin-bottom: 15px">Upload Data </h3>
         <div class="input-group">
             <input type="file" name="file" class="form-control-file input-group-prepend" id="file_input">
@@ -42,14 +35,28 @@
             <input type="radio" name="file_type" id="tsv_file" value="tsv">
         </div>
 
-        <h3 style="margin-bottom: 15px">Cox Regression will be run with: </h3>
-        <ul>
-            <li>Maximum Iterations: {{max_steps}} </li>
-            <li>Convergence Criteria: {{precision}} </li>
-        </ul>
+        <h3 style="margin-bottom: 15px">Select Duration and Event Columns</h3>
+        <div class="input-group">
+            <label for="duration_col">Duration Column:</label>
+            <input type="text" name="duration_col" id="duration_col">
+        </div>
 
+        <div class="input-group">
+            <label for="event_col">Event Column:</label>
+            <input type="text" name="event_col" id="event_col">
+        </div>
 
+        <h3 style="margin-bottom: 15px">Select Maximum Number of Iterations and Convergence Criteria</h3>
 
+        <div class="input-group">
+            <label for="max_steps">Maximum Iterations:</label>
+            <input type="text" name="max_steps" id="max_steps" value="500">
+        </div>
+
+        <div class="input-group">
+            <label for="precision"> Convergence Criteria:</label>
+            <input type="text" name="precision" id="precision" value="1e-07">
+        </div>
 
         <input value="Run" style="margin: 20px; float: right" type="submit"
                class="btn btn-primary btn-lg">
@@ -68,3 +75,4 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 </body>
+</html>

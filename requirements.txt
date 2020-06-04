@@ -1,1 +1,5 @@
 pandas
+lifelines
+numpy
+scipy
+matplotlib
