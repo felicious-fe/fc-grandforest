@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Federated Cox Regression</title>
+    <title>FedPCA</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
           integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
     <style>
@@ -13,48 +13,18 @@
 </head>
 <body style="margin: 50px">
 
-<h1 style="color:#256BEE"><u>Federated Cox Proportional Hazard Model</u></h1>
+<h1>Federated PCA</h1>
 
 <h2 style="margin-bottom: 30px">Client</h2>
 
 <form action="run" method="post" enctype=multipart/form-data>
     <div class="form-group" style="width: 50%">
-        <h3 style="margin-bottom: 15px">Criteria for File Upload </h3>
-        <ul>
-            <li>Duration Column has to be named: {{duration_col}} </li>
-            <li>Event Column has to be named: {{event_col}} </li>
-            <li>Covariates have to be named: {{covariates}}</li>
-        </ul>
-
         <h3 style="margin-bottom: 15px">Upload Data </h3>
         <div class="input-group">
             <input type="file" name="file" class="form-control-file input-group-prepend" id="file_input">
         </div>
-
-        <h3 style="margin-bottom: 15px">Select Upload File Type </h3>
-        <div class="input-group">
-            <label for="csv_file">CSV File</label>
-            <input type="radio" name="file_type" id="csv_file" value="csv" checked>
-        </div>
-
-        <div class="input-group">
-            <label for="tsv_file">TSV File</label>
-            <input type="radio" name="file_type" id="tsv_file" value="tsv">
-        </div>
-
-        <h3 style="margin-bottom: 15px">Cox Regression will be run with: </h3>
-        <ul>
-            <li>Maximum Iterations: {{max_steps}} </li>
-            <li>Convergence Criteria: {{precision}} </li>
-        </ul>
-
-
-
-
         <input value="Run" style="margin: 20px; float: right" type="submit"
                class="btn btn-primary btn-lg">
-
-
     </div>
 </form>
 
@@ -68,3 +38,4 @@
         integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
         crossorigin="anonymous"></script>
 </body>
+</html>
