@@ -48,7 +48,6 @@ def data():
         global_data = redis_get('global_data')
         global_data.append(request.get_json(True)['data'])
         redis_set('global_data', global_data)
-        next_step()
         global_mean()
         return jsonify(True)
     # data will be send to the master
@@ -88,6 +87,7 @@ def setup():
 
 def next_step():
     step_id = redis_get('step_id')
+
     redis_set('step', steps[step_id])
     redis_set('step_id', step_id+1)
 
@@ -110,7 +110,10 @@ def global_mean():
     current_app.logger.info('[API] run global_mean')
     global_data = redis_get('global_data')
     nr_clients = redis_get('nr_clients')
+    current_app.logger.info(f'[API] global data:{global_data}')
+    current_app.logger.info(f'[API] nr_clients:{nr_clients}')
     if len(global_data) == nr_clients:
+        next_step()
         current_app.logger.info('[API] The data of all clients has arrived')
         mean = 0
         number_samples = 1
