@@ -1,12 +1,10 @@
 import pickle
-import queue as q
-import redis
 import rq
 from flask import Blueprint, jsonify, request, current_app
 import numpy as np
 
-pool = redis.BlockingConnectionPool(host='localhost', port=6379, db=0, queue_class=q.Queue)
-r = redis.Redis(connection_pool=pool)
+from redis import r, redis_get, redis_set
+
 r.set('available', pickle.dumps(False))
 r.set('step', pickle.dumps('start'))
 r.set('step_id', pickle.dumps(0))
@@ -37,11 +35,11 @@ def data():
     :return: GET request: JSON with key 'data' and value data
              POST request: JSON True
     """
-    # data will only be send by the slave in the step send_to_master
+    # data will only be sent by the slave in the step send_to_master
     current_app.logger.info(f'[API] /data {r.get("step")}')
     current_app.logger.info(f'[API] /data {pickle.loads(r.get("step"))}')
 
-    # data will be pulled from flask object request as json format
+    # data will be pulled from flask object request in json format
     if request.method == 'POST':
         current_app.logger.info('[API] /data POST request')
         current_app.logger.info(request.get_json(True))
@@ -50,7 +48,7 @@ def data():
         redis_set('global_data', global_data)
         global_mean()
         return jsonify(True)
-    # data will be send to the master
+    # data will be sent to the master
     elif request.method == 'GET':
         current_app.logger.info('[API] /data GET request')
         redis_set('available', False)
@@ -92,17 +90,6 @@ def next_step():
     redis_set('step_id', step_id+1)
 
 
-def redis_get(key):
-    if key in r:
-        return pickle.loads(r.get(key))
-    else:
-        return None
-
-
-def redis_set(key, value):
-    r.set(key, pickle.dumps(value))
-
-
 def global_mean():
     """
     calculates the global mean if the data of all clients arrived
@@ -137,22 +124,22 @@ def local_mean():
     :return: the mean of the local array and the length of the local array as a tuple
     """
     current_app.logger.info('[API] run local_mean')
-    localdata = redis_get('data')
-    if localdata is None:
+    local_data = redis_get('data')
+    if local_data is None:
         current_app.logger.info('[API] Data is None')
         return None
     else:
-        mean = np.mean(localdata)
-        nr_sampels = len(localdata)
+        mean = np.mean(local_data)
+        nr_samples = len(local_data)
         client_id = redis_get('id')
-        current_app.logger.info(f'[API] local_mean of client {client_id}: {mean} with {nr_sampels} samples')
+        current_app.logger.info(f'[API] local mean of client {client_id}: {mean} with {nr_samples} samples')
         if redis_get('master'):
             next_step()
             global_data = redis_get('global_data')
-            global_data.append((mean, nr_sampels))
+            global_data.append((mean, nr_samples))
             redis_set('global_data', global_data)
             global_mean()
         else:
-            redis_set('local_data', (mean, nr_sampels))
+            redis_set('local_data', (mean, nr_samples))
             next_step()
             redis_set('available', True)
