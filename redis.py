@@ -15,3 +15,7 @@ def redis_get(key):
 
 def redis_set(key, value):
     r.set(key, pickle.dumps(value))
+
+
+def redis_append(key, value):
+    redis_set(key, redis_get(key).append(value))
