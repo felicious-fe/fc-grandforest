@@ -20,16 +20,16 @@ NUMBER_SAMPLES_IDX = 1
 @api_bp.route('/setup', methods=['POST'])
 def setup():
     """
-    set setup params, id is the id of the client, master is True if the client is the master,
-    in global_data the data from all clients (including the master) will be aggregated,
+    set setup params, id is the id of the client, coordinator is True if the client is the coordinator,
+    in global_data the data from all clients (including the coordinator) will be aggregated,
     clients is a list of all ids from all clients, nr_clients is the number of clients involved in the app
     :return: JSON True
     """
     setup_params = request.get_json()
     redis_set('id', setup_params['id'])
-    master = setup_params['master']
-    redis_set('master', master)
-    if master:
+    coordinator = setup_params['coordinator']
+    redis_set('coordinator', coordinator)
+    if coordinator:
         redis_set('global_data', [])
     redis_set('clients', setup_params['clients'])
     redis_set('nr_clients', len(setup_params['clients']))
@@ -75,7 +75,7 @@ def data():
 
         return jsonify(True)
 
-    # Data will be sent to the master
+    # Data will be sent to the coordinator
     elif request.method == 'GET':
         redis_set('available', False)
         local_data = redis_get('local_data')

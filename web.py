@@ -6,7 +6,7 @@ from redis_util import redis_get, r, redis_set
 
 tasks = rq.Queue('fc_tasks', connection=r)
 web_bp = Blueprint('web', __name__)
-steps = ['setup', 'local_mean_calc', 'send_to_master', 'global_mean_calc', 'final']
+steps = ['setup', 'local_mean_calc', 'send_to_coordinator', 'global_mean_calc', 'final']
 
 
 @web_bp.route('/', methods=['GET'])
@@ -27,7 +27,7 @@ def root():
     elif step == 'final':
         result = redis_get('result')
         if result is not None:
-            return f'master: {redis_get("master")}\ndata: {redis_get("data")}\nMean: {result}'
+            return f'coordinator: {redis_get("coordinator")}\ndata: {redis_get("data")}\nMean: {result}'
         else:
             return 'something is None weirdly'
     else:
@@ -39,14 +39,14 @@ def params():
     """
     :return: current parameter values as a HTML page
     """
-    master = redis_get('master')
+    coordinator = redis_get('coordinator')
     step = redis_get('step')
     local_data = redis_get('local_data')
     global_data = redis_get('global_data')
     data = redis_get('data')
     available = redis_get('available')
     return f"""
-        master: {master}
+        coordinator: {coordinator}
         step: {step}
         local data: {local_data}
         global data: {global_data}
@@ -94,7 +94,7 @@ def local_mean():
     else:
         mean = np.mean(local_data)
         nr_samples = len(local_data)
-        if redis_get('master'):
+        if redis_get('coordinator'):
             global_data = redis_get('global_data')
             global_data.append((mean, nr_samples))
             redis_set('global_data', global_data)
