@@ -2,7 +2,7 @@ import pickle
 import rq
 from flask import Blueprint, jsonify, request
 
-from redis import r, redis_get, redis_set
+from redis_util import r, redis_get, redis_set
 
 r.set('available', pickle.dumps(False))
 r.set('step', pickle.dumps('start'))
@@ -12,6 +12,9 @@ r.set('global_data', pickle.dumps(True))
 
 api_bp = Blueprint('api', __name__)
 tasks = rq.Queue('fc_tasks', connection=r)
+
+LOCAL_MEAN_IDX = 0
+NUMBER_SAMPLES_IDX = 1
 
 
 @api_bp.route('/status', methods=['GET'])
@@ -40,20 +43,15 @@ def data():
         global_data = redis_get('global_data').append(data_received)
         redis_set('global_data', global_data)
 
-        nr_clients = redis_get('nr_clients')
+        if len(global_data) == redis_get('nr_clients'):
+            sum_means = 0
+            sum_samples = 0
 
-        if len(global_data) == nr_clients:
-            mean = 0
-            number_samples = 1
-            sum = 0
-            counter = 0
+            for data_chunk in global_data:
+                sum_means += data_chunk[LOCAL_MEAN_IDX] * data_chunk[NUMBER_SAMPLES_IDX]
+                sum_samples += data_chunk[NUMBER_SAMPLES_IDX]
 
-            for i in global_data:
-                sum += i[mean] * i[number_samples]
-                counter += i[number_samples]
-
-            result = str(sum / counter)
-            redis_set('result', result)
+            redis_set('result', str(sum_means / sum_samples))
 
         return jsonify(True)
 
@@ -61,6 +59,7 @@ def data():
     elif request.method == 'GET':
         redis_set('available', False)
         local_data = redis_get('local_data')
+
         return jsonify({'data': local_data})
 
 

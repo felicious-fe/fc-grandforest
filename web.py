@@ -1,10 +1,9 @@
-import redis
 import rq
 from flask import Blueprint, current_app, render_template, request
-from fc_app.api import local_mean, next_step, redis_get, redis_set
+import numpy as np
 
+from redis_util import redis_get, r, redis_set
 
-r = redis.Redis(host='localhost', port=6379, db=0)
 tasks = rq.Queue('fc_tasks', connection=r)
 web_bp = Blueprint('web', __name__)
 steps = ['setup', 'local_mean_calc', 'send_to_master', 'global_mean_calc', 'final']
@@ -67,28 +66,38 @@ def run():
     """
     cur_step = redis_get('step')
     if cur_step == 'start':
-        current_app.logger.info('[WEB] POST request to /run in step "start" -> wait setup not finished')
         return 'Wait until setup is done'
     elif cur_step == 'setup':
-        current_app.logger.info('[WEB] POST request to /run in step "setup" -> read data')
-        current_app.logger.info('[WEB] Upload file')
         if 'file' in request.files:
             file = request.files['file']
             file_data = file.read().decode("latin-1")
-            data = list(map(int, file_data.strip().split(',')))
-            current_app.logger.info(f'[WEB] data: {data}')
-            redis_set('data', data)
-            current_app.logger.info('[WEB] File successfully uploaded and processed')
-            next_step()
+            redis_set('data', list(map(int, file_data.strip().split(','))))
             local_mean()
             return 'Calculating results. Please wait...'
         else:
-            current_app.logger.info('[WEB] No File was uploaded')
             return 'Empty file...'
     elif cur_step == 'final':
-        current_app.logger.info('[WEB] POST request to /run in step "final" -> GET request to "/"')
-        # TODO weiterleitung zu route /
-        return 'TODO'
+        return 'Go to the front page'
     else:
-        current_app.logger.info(f'[WEB] POST request to /run in step "{cur_step}" -> wait calculations not finished')
         return 'Calculating results. Please wait...'
+
+
+def local_mean():
+    """
+    :return: the mean of the local array and the length of the local array as a tuple
+    """
+    current_app.logger.info('[API] run local_mean')
+    local_data = redis_get('data')
+    if local_data is None:
+        current_app.logger.info('[API] Data is None')
+        return None
+    else:
+        mean = np.mean(local_data)
+        nr_samples = len(local_data)
+        if redis_get('master'):
+            global_data = redis_get('global_data')
+            global_data.append((mean, nr_samples))
+            redis_set('global_data', global_data)
+        else:
+            redis_set('local_data', (mean, nr_samples))
+            redis_set('available', True)
