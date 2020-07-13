@@ -114,7 +114,7 @@ def global_mean():
     current_app.logger.info(f'[API] nr_clients:{nr_clients}')
     if len(global_data) == nr_clients:
         next_step()
-        current_app.logger.info('[API] The data of all clients has arrived')
+        current_app.logger.info('[API] All participants have sent their data')
         mean = 0
         number_samples = 1
         sum = 0
@@ -129,7 +129,7 @@ def global_mean():
         redis_set('result', result)
         next_step()
     else:
-        current_app.logger.info('[API] Not the data of all clients has been send to the master')
+        current_app.logger.info('[API] The coordinator has not received data from all clients yet')
 
 
 def local_mean():
