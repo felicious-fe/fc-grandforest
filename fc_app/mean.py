@@ -1,7 +1,6 @@
 import os
 from flask import current_app
 from redis_util import redis_set, redis_get
-import pandas as pd
 import numpy as np
 
 
