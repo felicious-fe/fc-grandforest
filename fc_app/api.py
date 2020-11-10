@@ -40,7 +40,6 @@ def status():
     """
     available = redis_get('available')
     current_app.logger.info('[API] /status GET request ' + str(available) + ' - [STEP]: ' + str(get_step()))
-    current_app.logger.info('[API] No data available to send')
 
     if get_step() == 'start':
         current_app.logger.info('[STEP] start')

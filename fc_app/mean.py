@@ -19,7 +19,7 @@ def read_input(input_dir: str):
                 file = open(input_dir + "/" + filename, "r")
                 file_data = file.read()
                 current_app.logger.info('[API] ' + str(file_data))
-                files.append(list(map(int, file_data.strip().split(','))))
+                files.append(list(map(float, file_data.strip().split(','))))
             else:
                 continue
         return files
@@ -56,7 +56,7 @@ def write_results(global_mean: float, output_dir: str):
     """
     try:
         current_app.logger.info("Write results to output folder:")
-        file_write = open(output_dir + '/result.txt', 'w')
+        file_write = open(output_dir + '/result.txt', 'x')
         file_write.write(str(global_mean))
         file_write.close()
     except Exception as e:
@@ -68,7 +68,6 @@ def write_results(global_mean: float, output_dir: str):
         file_read.close()
     except Exception as e:
         current_app.logger.error('File could not be read. There might be something wrong.', e)
-
 
 
 def calculate_local_mean():
