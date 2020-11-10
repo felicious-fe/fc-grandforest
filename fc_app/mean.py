@@ -56,12 +56,20 @@ def write_results(global_mean: float, output_dir: str):
     :return: None
     """
     try:
-        result_df = pd.DataFrame(data=[global_mean], columns=["mean"], index=["global"])
         current_app.logger.info("Write results to output folder:")
-        current_app.logger.info(result_df.head().to_string())
-        result_df.to_csv(output_dir + "/results.csv")
+        file_write = open(output_dir + '/result.txt', 'w')
+        file_write.write(str(global_mean))
+        file_write.close()
     except Exception as e:
         current_app.logger.error('Could not write result file.', e)
+    try:
+        file_read = open(output_dir + '/result.txt', 'r')
+        content = file_read.read()
+        current_app.logger.info(content)
+        file_read.close()
+    except Exception as e:
+        current_app.logger.error('File could not be read. There might be something wrong.', e)
+
 
 
 def calculate_local_mean():
