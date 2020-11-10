@@ -51,7 +51,7 @@ def status():
         local_mean, nr_samples = calculate_local_mean()
 
         if redis_get('is_coordinator'):
-            # if this is the coordinator, directy add the local mean and number of samples to the global_data list
+            # if this is the coordinator, directly add the local mean and number of samples to the global_data list
             global_data = redis_get('global_data')
             global_data.append([local_mean, nr_samples])
             redis_set('global_data', global_data)
