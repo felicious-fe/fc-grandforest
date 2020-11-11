@@ -1,4 +1,4 @@
 #!/bin/bash
 
 echo "Building docker image..."
-docker build . --tag fc_mean_flask
+docker build . --tag fc_mean
