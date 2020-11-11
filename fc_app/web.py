@@ -30,7 +30,7 @@ def root():
     elif step == 'waiting':
         if redis_get('is_coordinator'):
             current_app.logger.info('[WEB] Waiting for client data...')
-            return 'Send results to coordinator'
+            return 'Waiting fo client data...'
         else:
             current_app.logger.info('[WEB] Send local results to coordinator')
             return 'Send results to coordinator'
@@ -47,12 +47,9 @@ def root():
     elif step == 'write_results':
         current_app.logger.info('[WEB] Write Results')
         return 'Write results to output file....'
-    elif step == 'finalize':
-        current_app.logger.info('[WEB] Finished')
-        return 'Finalize computation...'
     elif step == 'finished':
         current_app.logger.info('[WEB] Finished')
-        return 'Computation finished!'
+        return 'Computation finished...'
     else:
         return 'Something went wrong.'
 
