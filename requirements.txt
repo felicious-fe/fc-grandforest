@@ -3,7 +3,7 @@ Flask==1.1.1
 itsdangerous==1.1.0
 Jinja2==2.10.1
 MarkupSafe==1.1.1
-numpy==1.17.2
+numpy==1.19.4
 redis==3.3.8
 rq==1.1.0
 Werkzeug==0.15.5

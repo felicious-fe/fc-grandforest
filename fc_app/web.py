@@ -30,7 +30,7 @@ def root():
     elif step == 'waiting':
         if redis_get('is_coordinator'):
             current_app.logger.info('[WEB] Waiting for client data...')
-            return 'Send results to coordinator'
+            return 'Waiting fo client data...'
         else:
             current_app.logger.info('[WEB] Send local results to coordinator')
             return 'Send results to coordinator'
