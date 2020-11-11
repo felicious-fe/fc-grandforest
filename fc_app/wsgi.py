@@ -1,4 +1,4 @@
-from fc_app import FCServer
+from fc_app.server import FCServer
 
 
 def application(environ, start_response):
