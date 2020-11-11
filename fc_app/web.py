@@ -47,6 +47,9 @@ def root():
     elif step == 'write_results':
         current_app.logger.info('[WEB] Write Results')
         return 'Write results to output file....'
+    elif step == 'finalize':
+        current_app.logger.info('[WEB] Finalize')
+        return 'Finalize the computation...'
     elif step == 'finished':
         current_app.logger.info('[WEB] Finished')
         return 'Computation finished...'
