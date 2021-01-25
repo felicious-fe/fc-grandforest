@@ -1,4 +1,4 @@
 #!/bin/bash
 
 echo "Building docker image..."
-docker build . --tag fc_mean
+docker build . --tag fc_mean:new

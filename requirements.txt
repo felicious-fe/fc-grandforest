@@ -7,3 +7,4 @@ numpy==1.19.4
 redis==3.3.8
 rq==1.1.0
 Werkzeug==0.15.5
+pyyaml==5.3.1

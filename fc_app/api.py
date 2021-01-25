@@ -3,8 +3,8 @@ import queue as q
 import redis
 import rq
 from flask import Blueprint, jsonify, request, current_app
-
-from fc_app.mean import calculate_global_mean, calculate_local_mean, read_input, write_results
+from fc_app.io import read_input, write_results, read_config
+from fc_app.algo import global_aggregation, local_computation
 from redis_util import redis_set, redis_get, get_step, set_step
 
 pool = redis.BlockingConnectionPool(host='localhost', port=6379, db=0, queue_class=q.Queue)
@@ -23,10 +23,6 @@ set_step('start')
 # Initialize the local and global data
 redis_set('local_data', None)
 redis_set('global_data', [])
-
-# Set the paths of the input and output dir
-INPUT_DIR = "/mnt/input"
-OUTPUT_DIR = "/mnt/output"
 
 api_bp = Blueprint('api', __name__)
 tasks = rq.Queue('fc_tasks', connection=r)
@@ -47,7 +43,7 @@ def status():
 
     elif get_step() == 'local_calculation':
         current_app.logger.info('[STEP] local_calculation')
-        local_mean, nr_samples = calculate_local_mean()
+        local_mean, nr_samples = local_computation()
 
         if redis_get('is_coordinator'):
             # if this is the coordinator, directly add the local mean and number of samples to the global_data list
@@ -76,7 +72,7 @@ def status():
     elif get_step() == 'global_calculation':
         # as soon as all data has arrived the global calculation starts
         current_app.logger.info('[STEP] global_calculation')
-        calculate_global_mean()
+        global_aggregation()
         set_step("broadcast_results")
 
     elif get_step() == 'broadcast_results':
@@ -89,7 +85,7 @@ def status():
     elif get_step() == 'write_results':
         # The global mean is written to the output directory
         current_app.logger.info('[STEP] write_results')
-        write_results(redis_get('global_mean'), OUTPUT_DIR)
+        write_results(redis_get('global_result'))
         current_app.logger.info('[API] Finalize client')
         if redis_get('is_coordinator'):
             # The coordinator is already finished now
@@ -149,8 +145,8 @@ def data():
         else:
             # Get global mean from coordinator (as client)
             current_app.logger.info('[API] ' + str(request.get_json()))
-            redis_set('global_mean', request.get_json(True)['global_mean'])
-            current_app.logger.info('[API] ' + str(redis_get('global_mean')))
+            redis_set('global_result', request.get_json(True)['global_result'])
+            current_app.logger.info('[API] ' + str(redis_get('global_result')))
             set_step('write_results')
             return jsonify(True)
 
@@ -175,9 +171,9 @@ def data():
             # broadcast data to clients (as coordinator)
             current_app.logger.info('[API] broadcast data from coordinator to clients')
             redis_set('available', False)
-            global_mean = redis_get('global_mean')
-            current_app.logger.info(global_mean)
-            return jsonify({'global_mean': global_mean})
+            global_result = redis_get('global_result')
+            current_app.logger.info(global_result)
+            return jsonify({'global_result': global_result})
 
     else:
         current_app.logger.info('[API] Wrong request type, only GET and POST allowed')
@@ -195,14 +191,15 @@ def setup():
     set_step('setup')
     current_app.logger.info('[STEP] setup')
     retrieve_setup_parameters()
-    files = read_input(INPUT_DIR)
-    if len(files) == 0:
+    read_config()
+    files = read_input()
+    if files is None:
         current_app.logger.info('[API] no data was found.')
         return jsonify(False)
     else:
         current_app.logger.info('[API] Data: ' + str(files) + ' found in ' + str(len(files)) + ' files.')
         current_app.logger.info('[API] compute local mean of ' + str(files))
-        redis_set('files', files)
+        redis_set('data', files)
         set_step("local_calculation")
         return jsonify(True)
 
