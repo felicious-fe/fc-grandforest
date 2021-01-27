@@ -1,5 +1,6 @@
 import yaml
 from flask import current_app
+
 from redis_util import redis_get, redis_set
 
 INPUT_DIR = "/mnt/input"
@@ -19,29 +20,19 @@ def read_input():
 
         return data
     except Exception as e:
-        current_app.logger.info('[API] could not read files', e)
+        current_app.logger.info('[API] could not read file', e)
 
         return None
 
 
 def write_results(result):
-    # Write result
     try:
-        current_app.logger.info("Write results to output folder:")
+        current_app.logger.info("Write results to output folder.")
         file_write = open(OUTPUT_DIR + '/' + redis_get("output_filename"), 'x')
-        file_write.write(str(result))
+        file_write.write(result)
         file_write.close()
     except Exception as e:
         current_app.logger.error('Could not write result file.', e)
-
-    # Check if file is damaged
-    try:
-        file_read = open(OUTPUT_DIR + '/' + redis_get("output_filename"), 'r')
-        content = file_read.read()
-        current_app.logger.info(content)
-        file_read.close()
-    except Exception as e:
-        current_app.logger.error('There might be something wrong. The written file is not readable.', e)
 
 
 def read_config():

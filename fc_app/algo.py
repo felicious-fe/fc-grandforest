@@ -1,17 +1,19 @@
-from flask import current_app
-from redis_util import redis_set, redis_get
 import numpy as np
+from flask import current_app
+
+from redis_util import redis_set, redis_get
 
 
 def compute_local(local_data):
     local_result = np.mean(local_data)
     nr_samples = len(local_data)
-    current_app.logger.info(f'[API] Local mean of client {redis_get("id")}: {local_result} with {nr_samples} samples')
+    current_app.logger.info(
+        f'[API] Local computation of client {redis_get("id")}: {local_result} with {nr_samples} samples')
 
     return local_result, nr_samples
 
 
-def compute_aggregation(global_data: []):
+def compute_aggregation(global_data):
     mean = 0
     number_samples = 1
     sum = 0

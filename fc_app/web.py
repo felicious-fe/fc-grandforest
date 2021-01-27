@@ -1,14 +1,12 @@
 import redis
 import rq
 from flask import Blueprint, current_app
-from redis_util import redis_get, get_step
 
+from redis_util import redis_get, get_step
 
 r = redis.Redis(host='localhost', port=6379, db=0)
 tasks = rq.Queue('fc_tasks', connection=r)
 web_bp = Blueprint('web', __name__)
-STEPS = ['start', 'setup', 'local_calculation', 'waiting', 'global_calculation', 'broadcast_results', 'write_results',
-         'finalize', 'finished']
 
 
 @web_bp.route('/', methods=['GET'])
@@ -21,9 +19,9 @@ def root():
     if step == 'start':
         current_app.logger.info('[WEB] Initializing')
         return 'Initializing'
-    elif step == 'setup':
+    elif step == 'init':
         current_app.logger.info('[WEB] Setup')
-        return 'Setup'
+        return 'Init'
     elif step == 'local_calculation':
         current_app.logger.info('[WEB] Calculating local mean')
         return 'Calculating local mean...'
@@ -44,7 +42,7 @@ def root():
         else:
             current_app.logger.info('[WEB] Broadcasting global mean to other clients')
             return 'Broadcasting global mean to other clients...'
-    elif step == 'write_results':
+    elif step == 'write_output':
         current_app.logger.info('[WEB] Write Results')
         return 'Write results to output file....'
     elif step == 'finalize':

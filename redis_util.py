@@ -1,5 +1,6 @@
 import pickle
 import queue as q
+
 import redis
 
 pool = redis.BlockingConnectionPool(host='localhost', port=6379, db=0, queue_class=q.Queue)
