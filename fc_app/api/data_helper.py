@@ -4,6 +4,11 @@ from redis_util import redis_set, redis_get, set_step, get_step
 
 
 def receive_client_data(client_data):
+    """
+    As a controller, receive client data from request and process it.
+    :param client_data: Data that has been received from the client
+    :return: None
+    """
     # Get data from clients (as coordinator)
     current_app.logger.info('[API] Receive data from client')
     if get_step() != 'finalize':
@@ -20,6 +25,11 @@ def receive_client_data(client_data):
 
 
 def receive_coordinator_data(coordinator_data):
+    """
+    As a client, receive data from the coordinator and process it
+    :param coordinator_data: Data received from the coordinator
+    :return: None
+    """
     # Get global result from coordinator (as client)
     current_app.logger.info('[API] Receive data from coordinator')
     redis_set('global_result', coordinator_data['global_result'])
@@ -28,6 +38,10 @@ def receive_coordinator_data(coordinator_data):
 
 
 def broadcast_data_to_clients():
+    """
+    As a coordinator, after aggregating the local models to a global one, broadcast the global model to the clients
+    :return: Global result
+    """
     # broadcast data to clients (as coordinator)
     current_app.logger.info('[API] broadcast data from coordinator to clients')
     redis_set('available', False)
@@ -37,6 +51,10 @@ def broadcast_data_to_clients():
 
 
 def send_data_to_coordinator():
+    """
+    As a client, send local data to the coordinator. ATTENTION: Only send non-sensitive data here
+    :return: local data
+    """
     # send data to coordinator (as client)
     current_app.logger.info('[API] send data to coordinator')
     redis_set('available', False)
@@ -47,6 +65,10 @@ def send_data_to_coordinator():
 
 
 def send_finished_flag_to_coordinator():
+    """
+    As a client, send the finished flag to the coordinator to show that the site is finished.
+    :return: True
+    """
     # Send finish flag to the coordinator
     current_app.logger.info('[API] send finish flag to coordinator')
     redis_set('available', False)
@@ -56,6 +78,10 @@ def send_finished_flag_to_coordinator():
 
 
 def has_client_data_arrived():
+    """
+    As a coordinator, check if the local data of all clients has arrived to start the global calculation
+    :return: None
+    """
     current_app.logger.info('[API] Coordinator checks if data of all clients has arrived')
     global_data = redis_get('global_data')
     nr_clients = redis_get('nr_clients')
@@ -68,6 +94,10 @@ def has_client_data_arrived():
 
 
 def have_clients_finished():
+    """
+    As a coordinator, check if all clients have finished yet.
+    :return: True if clients have finished, else False
+    """
     current_app.logger.info('[API] Coordinator checks if all clients have finished')
     finish = redis_get('finished')
     nr_clients = redis_get('nr_clients')

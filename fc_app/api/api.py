@@ -6,7 +6,7 @@ from flask import Blueprint, jsonify, request, current_app
 
 from fc_app.api.data_helper import receive_client_data, receive_coordinator_data, broadcast_data_to_clients, \
     send_data_to_coordinator, send_finished_flag_to_coordinator
-from fc_app.api.status_helper import start, init, local_calculation, waiting, global_calculation, broadcast_results, \
+from fc_app.api.status_helper import init, local_calculation, waiting, global_calculation, broadcast_results, \
     write_output, finalize
 from redis_util import redis_set, redis_get, get_step, set_step
 
@@ -41,7 +41,8 @@ def status():
     current_app.logger.info('[API] /status GET request ' + str(available) + ' - [STEP]: ' + str(get_step()))
 
     if get_step() == 'start':
-        start()
+        current_app.logger.info('[STEP] start')
+        current_app.logger.info('[API] Federated Mean App')
     elif get_step() == 'init':
         init()
         set_step("local_calculation")
@@ -80,8 +81,8 @@ def status():
 @api_bp.route('/data', methods=['GET', 'POST'])
 def data():
     """
-    GET request to /data sends data to coordinator
-    POST request to /data pulls data from coordinator
+    GET request to /data sends data to coordinator or clients
+    POST request to /data pulls data from coordinator or clients
     :return: GET request: JSON with key 'data' and value data
              POST request: JSON True
     """
@@ -114,9 +115,12 @@ def data():
 @api_bp.route('/setup', methods=['POST'])
 def setup():
     """
-    set setup params, id is the id of the client, coordinator is True if the client is the coordinator,
-    in global_data the data from all clients (including the coordinator) will be aggregated,
-    clients is a list of all ids from all clients, nr_clients is the number of clients involved in the app
+    set setup params
+    - id is the id of the client
+    - coordinator is True if the client is the coordinator,
+    - in global_data the data from all clients (including the coordinator) will be aggregated
+    - clients is a list of all ids from all clients
+    - nr_clients is the number of clients involved in the app
     :return: JSON True
     """
     current_app.logger.info('[STEP] setup')

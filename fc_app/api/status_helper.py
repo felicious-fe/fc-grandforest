@@ -6,20 +6,23 @@ from fc_app.io import read_config, read_input, write_results
 from redis_util import redis_set, redis_get, set_step
 
 
-def start():
-    current_app.logger.info('[STEP] start')
-    current_app.logger.info('[API] Federated Mean App')
-
-
 def init():
+    """
+    Read in the config and input files
+    :return: None
+    """
     read_config()
-    files = read_input()
-    current_app.logger.info('[API] Data: ' + str(files) + ' found in ' + str(len(files)) + ' files.')
-    current_app.logger.info('[API] compute local results of ' + str(files))
-    redis_set('data', files)
+    file = read_input()
+    current_app.logger.info('[API] Data: ' + str(file) + ' found in ' + str(len(file)) + ' files.')
+    current_app.logger.info('[API] compute local results of ' + str(file))
+    redis_set('data', file)
 
 
 def local_calculation():
+    """
+    Calculate the local model
+    :return: None
+    """
     current_app.logger.info('[STEP] local_calculation')
     local_result, nr_samples = local_computation()
     if redis_get('is_coordinator'):
@@ -36,6 +39,11 @@ def local_calculation():
 
 
 def waiting():
+    """
+    As a controller, wait until the data of all clients has arrived.
+    As a client, wait for the coordinator to finish the global aggregation.
+    :return: None
+    """
     if redis_get('is_coordinator'):
         current_app.logger.info('[API] Coordinator checks if data of all clients has arrived')
         # check if all clients have sent their data already
@@ -46,15 +54,27 @@ def waiting():
 
 
 def global_calculation():
+    """
+    As a controller, aggregate the local models to a global model
+    :return: None
+    """
     global_aggregation()
 
 
 def broadcast_results():
+    """
+    As a controller, broadcast the global model to all other clients
+    :return: None
+    """
     current_app.logger.info('[API] Share global results with clients')
     redis_set('available', True)
 
 
 def write_output():
+    """
+    Write the global results to the output directory.
+    :return: None
+    """
     write_results(redis_get('global_result'))
     current_app.logger.info('[API] Finalize client')
     if redis_get('is_coordinator'):
@@ -63,6 +83,11 @@ def write_output():
 
 
 def finalize():
+    """
+    As a controller, wait for all clients to be finished.
+    As a client, tell the controller that the results were written to the output directory.
+    :return: None
+    """
     current_app.logger.info("[API] Finalize")
     if redis_get('is_coordinator'):
         # The coordinator waits until all clients have finished

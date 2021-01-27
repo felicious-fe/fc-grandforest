@@ -8,6 +8,10 @@ OUTPUT_DIR = "/mnt/output"
 
 
 def read_input():
+    """
+    Read in the input data from the input directory
+    :return: Data or None if File could not be read
+    """
     filename = redis_get('input_filename')
     try:
         current_app.logger.info('[API] Parsing data of ' + INPUT_DIR)
@@ -26,6 +30,11 @@ def read_input():
 
 
 def write_results(result):
+    """
+    Write the results to the output directory
+    :param result: result to be written
+    :return: None
+    """
     try:
         current_app.logger.info("Write results to output folder.")
         file_write = open(OUTPUT_DIR + '/' + redis_get("output_filename"), 'x')
@@ -36,6 +45,10 @@ def write_results(result):
 
 
 def read_config():
+    """
+    Read in the config.yml in the input directory. Save the parameters in redis.
+    :return: None
+    """
     with open(INPUT_DIR + '/config.yml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)['fc_mean']
 
