@@ -14,17 +14,17 @@ def read_input():
     """
     filename = redis_get('input_filename')
     try:
-        current_app.logger.info('[API] Parsing data of ' + INPUT_DIR)
-        current_app.logger.info('[API] ' + filename)
+        current_app.logger.info('[IO] Parsing data of ' + INPUT_DIR)
+        current_app.logger.info('[IO] ' + filename)
 
         file = open(INPUT_DIR + "/" + filename, "r")
         file_data = file.read()
-        current_app.logger.info('[API] ' + str(file_data))
+        current_app.logger.info('[IO] ' + str(file_data))
         data = list(map(float, file_data.strip().split(',')))
 
         return data
     except Exception as e:
-        current_app.logger.info('[API] could not read file', e)
+        current_app.logger.error('[IO] could not read file', e)
 
         return None
 
@@ -36,12 +36,12 @@ def write_results(result):
     :return: None
     """
     try:
-        current_app.logger.info("Write results to output folder.")
+        current_app.logger.info("[IO] Write results to output folder.")
         file_write = open(OUTPUT_DIR + '/' + redis_get("output_filename"), 'x')
         file_write.write(result)
         file_write.close()
     except Exception as e:
-        current_app.logger.error('Could not write result file.', e)
+        current_app.logger.error('[IO] Could not write result file.', e)
 
 
 def read_config():
@@ -49,6 +49,7 @@ def read_config():
     Read in the config.yml in the input directory. Save the parameters in redis.
     :return: None
     """
+    current_app.logger.info('[IO] Read config file.')
     with open(INPUT_DIR + '/config.yml') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)['fc_mean']
 

@@ -13,8 +13,8 @@ def init():
     """
     read_config()
     file = read_input()
-    current_app.logger.info('[API] Data: ' + str(file) + ' found in ' + str(len(file)) + ' files.')
-    current_app.logger.info('[API] compute local results of ' + str(file))
+    current_app.logger.info('[STATUS] Data: ' + str(file) + ' found in ' + str(len(file)) + ' files.')
+    current_app.logger.info('[STATUS] compute local results of ' + str(file))
     redis_set('data', file)
 
 
@@ -45,12 +45,12 @@ def waiting():
     :return: None
     """
     if redis_get('is_coordinator'):
-        current_app.logger.info('[API] Coordinator checks if data of all clients has arrived')
+        current_app.logger.info('[STATUS] Coordinator checks if data of all clients has arrived')
         # check if all clients have sent their data already
         has_client_data_arrived()
     else:
         # the clients wait for the coordinator to finish
-        current_app.logger.info('[API] Client waiting for coordinator to finish')
+        current_app.logger.info('[STATUS] Client waiting for coordinator to finish')
 
 
 def global_calculation():
@@ -66,7 +66,7 @@ def broadcast_results():
     As a controller, broadcast the global model to all other clients
     :return: None
     """
-    current_app.logger.info('[API] Share global results with clients')
+    current_app.logger.info('[STATUS] Share global results with clients')
     redis_set('available', True)
 
 
@@ -76,7 +76,7 @@ def write_output():
     :return: None
     """
     write_results(redis_get('global_result'))
-    current_app.logger.info('[API] Finalize client')
+    current_app.logger.info('[STATUS] Finalize client')
     if redis_get('is_coordinator'):
         # The coordinator is already finished now
         redis_set('finished', [True])
@@ -88,14 +88,13 @@ def finalize():
     As a client, tell the controller that the results were written to the output directory.
     :return: None
     """
-    current_app.logger.info("[API] Finalize")
     if redis_get('is_coordinator'):
         # The coordinator waits until all clients have finished
         if have_clients_finished():
-            current_app.logger.info('[API] Finalize coordinator.')
+            current_app.logger.info('[STATUS] All clients have finished. Finalize coordinator.')
             set_step('finished')
         else:
-            current_app.logger.info('[API] Not all clients have finished yet.')
+            current_app.logger.info('[STATUS] Wait for clients to be finished.')
     else:
         # The clients set available true to signal the coordinator that they have written the results.
         redis_set('available', True)

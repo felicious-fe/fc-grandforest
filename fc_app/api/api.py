@@ -38,7 +38,7 @@ def status():
     :return: JSON with key 'available' and value True or False and 'finished' value True or False
     """
     available = redis_get('available')
-    current_app.logger.info('[API] /status GET request ' + str(available) + ' - [STEP]: ' + str(get_step()))
+    current_app.logger.info('[STATUS] GET request ' + str(available))
 
     if get_step() == 'start':
         current_app.logger.info('[STEP] start')
@@ -49,8 +49,8 @@ def status():
     elif get_step() == 'local_calculation':
         local_calculation()
         set_step('waiting')
-    elif get_step() == 'waiting':
         current_app.logger.info('[STEP] waiting')
+    elif get_step() == 'waiting':
         waiting()
     elif get_step() == 'global_calculation':
         # as soon as all data has arrived the global calculation starts
@@ -67,8 +67,8 @@ def status():
         current_app.logger.info('[STEP] write_output')
         write_output()
         set_step("finalize")
-    elif get_step() == 'finalize':
         current_app.logger.info('[STEP] finalize')
+    elif get_step() == 'finalize':
         finalize()
     elif get_step() == 'finished':
         # All clients and the coordinator set available to False and finished to True and the computation is done
@@ -87,7 +87,7 @@ def data():
              POST request: JSON True
     """
     if request.method == 'POST':
-        current_app.logger.info('[API] /data POST request')
+        current_app.logger.info('[DATA] POST request')
         if redis_get('is_coordinator'):
             receive_client_data(request.get_json(True))
         else:
@@ -95,7 +95,7 @@ def data():
         return jsonify(True)
 
     elif request.method == 'GET':
-        current_app.logger.info('[API] /data GET request')
+        current_app.logger.info('[DATA] GET request')
         if redis_get('is_coordinator'):
             global_result = broadcast_data_to_clients()
             return jsonify({'global_result': global_result})
