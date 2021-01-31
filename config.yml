@@ -1,0 +1,4 @@
+fc_mean:
+  files:
+    input: input.csv # name of the input CSV
+    output: output.csv # name of the output CSV

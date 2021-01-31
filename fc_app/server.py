@@ -1,9 +1,12 @@
-from flask import Flask
 import logging
-from fc_app.api import api_bp
+
+from flask import Flask
+
+from fc_app.api.api import api_bp
 from fc_app.web import web_bp
 
 
+# Do not change this file if you do not know what you are doing.
 class FCServer:
     """
     Encapsulates the flask app and user-defined logic.
