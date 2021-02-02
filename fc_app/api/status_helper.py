@@ -12,10 +12,11 @@ def init():
     :return: None
     """
     read_config()
-    file = read_input()
-    current_app.logger.info('[STATUS] Data: ' + str(file) + ' found in ' + str(len(file)) + ' files.')
-    current_app.logger.info('[STATUS] compute local results of ' + str(file))
-    redis_set('data', file)
+    expression_data = read_input('expression_data_filename')
+    interaction_network = read_input('interaction_network_filename')
+    current_app.logger.info('[STATUS] compute local results')
+    redis_set('expression_data', expression_data)
+    redis_set('interaction_network', interaction_network)
 
 
 def local_calculation():

@@ -3,37 +3,38 @@ from flask import current_app
 
 from redis_util import redis_set, redis_get
 
+from fc_app.GrandForestR import GrandForestR
 
-def compute_mean(local_data):
+
+def compute_grandforest_model(local_data, network):
     """
-    Compute the local mean and number of samples
-    :param local_data: Local data
-    :return: The local mean and number of samples
+    Compute the local model and number of samples
+    :param local_data: Local expression data
+    :param network: Interaction Network (should be the same over the whole experiment)
+    :return: The local model and number of samples
     """
-    local_mean = np.mean(local_data)
+    grandforest = GrandForestR(network)
+    grandforest.fit(local_data)
+    local_model = grandforest.forest
     nr_samples = len(local_data)
     current_app.logger.info(
-        f'[API] Local computation of client {redis_get("id")}: {local_mean} with {nr_samples} samples')
+        f'[API] Local computation of client {redis_get("id")}: {local_model} with {nr_samples} samples')
 
-    return local_mean, nr_samples
+    return local_model, nr_samples
 
 
-def aggregate_means(global_data):
+def aggregate_grandforest_models(global_data):
     """
-    Aggregate the local means to a global mean
-    :param global_data: List of local means and local number of samples
-    :return: Global mean
+    Aggregate the local models to a global model
+    :param global_data: List of local models and local number of samples
+    :return: Global model
     """
-    mean = 0
-    number_samples = 1
-    sum = 0
-    counter = 0
-    for i in global_data:
-        sum += i[mean] * i[number_samples]
-        counter += i[number_samples]
-    global_mean = sum / counter
+    grandforest = GrandForestR()
+    model = global_data[0][0]
+    for i in range(1, len(global_data)):
+        model = grandforest.sum_forest(model, global_data[i][0])
 
-    return global_mean
+    return model
 
 
 def global_aggregation():
@@ -44,7 +45,7 @@ def global_aggregation():
     current_app.logger.info('[API] Calculate Global Aggregation')
     global_data = redis_get('global_data')
 
-    global_result = aggregate_means(global_data)
+    global_result = aggregate_grandforest_models(global_data)
 
     current_app.logger.info(f'[API] Global Result: {global_result}')
     redis_set('global_result', str(global_result))
@@ -56,8 +57,7 @@ def local_computation():
     :return: The local model/result and the number of samples
     """
     current_app.logger.info('[API] Calculate Local Results')
-    data = redis_get('data')
 
-    local_result, nr_samples = compute_mean(data)
+    local_result, nr_samples = compute_grandforest_model(redis_get('expression_data'), redis_get('interaction_network'))
 
     return local_result, nr_samples
