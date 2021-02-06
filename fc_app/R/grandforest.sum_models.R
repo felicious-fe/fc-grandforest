@@ -1,3 +1,8 @@
+#!/usr/bin/Rscript
+
+# Execute with args:
+# grandforest.sum_models.R firstForest.RData secondForest.RData resultForest.RData
+
 library(grandforest)
 library(forcats)
 
@@ -33,18 +38,30 @@ grandforest.sum_models <- function(model_1, model_2) {
   } else {
     stop("Not Implemented yet.")
   }
-  
+
   class(combined.forest) <- "grandforest.forest"
   
   combined.model <- list()
-  combined.model$num.trees = combined.forest$num.trees
-  combined.model$importance.mode = model_1$importance.mode
-  combined.model$treetype = model_1$treetype
-  combined.model$num.independent.variables = model_1$num.independent.variables
-  combined.model$forest = combined.forest
+  combined.model$num.trees <- combined.forest$num.trees
+  combined.model$importance.mode <- model_1$importance.mode
+  combined.model$treetype <- model_1$treetype
+  combined.model$num.independent.variables <- model_1$num.independent.variables
+  combined.model$forest <- combined.forest
   class(combined.model) <- "grandforest"
   return(combined.model)
 }
 
 
+args <- commandArgs(trailingOnly=TRUE)
 
+load(args[1])
+forest1 <- model
+model <- NULL
+
+load(args[2])
+forest2 <- model
+model <- NULL
+
+model <- grandforest.sum_models(forest1, forest2)
+
+save(model, file=args[3])

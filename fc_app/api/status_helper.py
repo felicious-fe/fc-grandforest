@@ -12,8 +12,8 @@ def init():
     :return: None
     """
     read_config()
-    expression_data = read_input('expression_data_filename')
-    interaction_network = read_input('interaction_network_filename')
+    expression_data = read_input('expression_data')
+    interaction_network = read_input('interaction_network')
     current_app.logger.info('[STATUS] compute local results')
     redis_set('expression_data', expression_data)
     redis_set('interaction_network', interaction_network)

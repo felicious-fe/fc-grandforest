@@ -1,4 +1,10 @@
 fc_grandforest:
+  options:
+    grandforest_method: supervised
+    number_of_trees: 10000
+    expression_data_dependent_variable_name: os_event
+    expression_data_separator: "\t"
+    interaction_network_separator: "\t"
   files:
     expression_data: expression_data.csv
     interaction_network: interaction_network.csv

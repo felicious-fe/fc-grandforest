@@ -2,7 +2,7 @@ FROM python:3.8
 
 RUN apt-get update
 RUN apt-get upgrade -y
-RUN apt-get install -y redis-server supervisor nginx r-cran-devtools r-cran-forcats
+RUN apt-get install -y redis-server supervisor nginx r-cran-devtools r-cran-forcats r-cran-readr
 
 RUN pip3 install --upgrade pip
 RUN pip3 install gunicorn

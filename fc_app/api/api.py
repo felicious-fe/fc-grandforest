@@ -42,7 +42,7 @@ def status():
 
     if get_step() == 'start':
         current_app.logger.info('[STEP] start')
-        current_app.logger.info('[API] Federated Mean App')
+        current_app.logger.info('[API] Federated GrandForest App')
     elif get_step() == 'init':
         init()
         set_step("local_calculation")
