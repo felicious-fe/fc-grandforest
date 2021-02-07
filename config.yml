@@ -8,5 +8,5 @@ fc_grandforest:
   files:
     expression_data: expression_data.csv
     interaction_network: interaction_network.csv
-    local_model_output: local_model.RData
-    global_model_output: global_model.RData
+    local_result_output_filename: local_model.RData
+    global_result_output_filename: global_model.RData

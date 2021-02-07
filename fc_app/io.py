@@ -48,24 +48,22 @@ def read_input(redis_identifier):
 		return None
 
 
-def write_results(local_model, global_model):
+def write_result(data, filename):
 	"""
 	Write the results to the output directory
-	:param local_model: locally trained model result to be written as RData File
-	:param global_model: globally aggregated model result to be written as RData File
+	:param data: binary data to be written as RData File
+	:param filename: output filename
 	:return: None
 	"""
+	output_filepath = OUTPUT_DIR + '/' + filename
+
 	try:
 		current_app.logger.info("[IO] Write results to output folder.")
-		output_file_writer1 = open(OUTPUT_DIR + '/' + redis_get("local_model_output_filename"), 'xb')
-		output_file_writer1.write(local_model)
-		output_file_writer1.close()
-
-		output_file_writer2 = open(OUTPUT_DIR + '/' + redis_get("global_model_output_filename"), 'xb')
-		output_file_writer2.write(global_model)
-		output_file_writer2.close()
+		output_file_writer = open(output_filepath, 'wb')
+		output_file_writer.write(data)
+		output_file_writer.close()
 	except Exception as e:
-		current_app.logger.error('[IO] Could not write result files.', e)
+		current_app.logger.error('[IO] Could not write result file ', filename, '.', e)
 
 
 def read_config():
@@ -88,5 +86,5 @@ def read_config():
 
 		redis_set('expression_data_filename', config['files']['expression_data'])
 		redis_set('interaction_network_filename', config['files']['interaction_network'])
-		redis_set('local_model_output_filename', config['files']['local_model_output'])
-		redis_set('global_model_output_filename', config['files']['global_model_output'])
+		redis_set('local_result_output_filename', config['files']['local_result_output_filename'])
+		redis_set('global_result_output_filename', config['files']['global_result_output_filename'])

@@ -54,7 +54,7 @@ def aggregate_grandforest_models(global_data):
 	"""
 	Aggregate the local models to a global model
 	:param global_data: List of local models and local number of samples
-	:return: Global model
+	:return: global result
 	"""
 
 	open('/app/temp/global_model', 'wb').write(bytes.fromhex(global_data[0][0]))
@@ -70,10 +70,10 @@ def aggregate_grandforest_models(global_data):
 
 		os.remove('/app/temp/temp_model')
 
-	global_model = open('/app/temp/global_model', 'rb').read().hex()
+	global_result = open('/app/temp/global_model', 'rb').read().hex()
 	os.remove('/app/temp/global_model')
 
-	return global_model
+	return global_result
 
 
 def global_aggregation():
@@ -84,10 +84,10 @@ def global_aggregation():
 	current_app.logger.info('[API] Calculate Global Aggregation')
 	global_data = redis_get('global_data')
 
-	global_result = aggregate_grandforest_models(global_data)
+	global_model = aggregate_grandforest_models(global_data)
 
-	current_app.logger.info(f'[API] Global Result: {sys.getsizeof(global_result)} Bytes written to global_model.RData')
-	redis_set('global_result', str(global_result))
+	current_app.logger.info(f'[API] Global Result: {sys.getsizeof(global_model)} Bytes written to global_model.RData')
+	redis_set('global_result', global_model)
 
 
 def local_computation():
@@ -97,6 +97,6 @@ def local_computation():
 	"""
 	current_app.logger.info('[API] Calculate Local Results')
 
-	local_result, nr_samples = compute_grandforest_model(redis_get('expression_data'), redis_get('interaction_network'))
+	local_model, nr_samples = compute_grandforest_model(redis_get('expression_data'), redis_get('interaction_network'))
 
-	return local_result, nr_samples
+	return local_model, nr_samples
