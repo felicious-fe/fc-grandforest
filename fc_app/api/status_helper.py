@@ -2,7 +2,7 @@ from flask import current_app
 
 from fc_app.algo import local_computation, global_aggregation
 from fc_app.api.data_helper import has_client_data_arrived, have_clients_finished
-from fc_app.io import read_config, read_input, write_results
+from fc_app.io import read_config, read_input, write_result
 from redis_util import redis_set, redis_get, set_step
 
 
@@ -12,10 +12,11 @@ def init():
     :return: None
     """
     read_config()
-    file = read_input()
-    current_app.logger.info('[STATUS] Data: ' + str(file) + ' found in ' + str(len(file)) + ' files.')
-    current_app.logger.info('[STATUS] compute local results of ' + str(file))
-    redis_set('data', file)
+    expression_data = read_input('expression_data')
+    interaction_network = read_input('interaction_network')
+    current_app.logger.info('[STATUS] compute local results')
+    redis_set('expression_data', expression_data)
+    redis_set('interaction_network', interaction_network)
 
 
 def local_calculation():
@@ -25,6 +26,7 @@ def local_calculation():
     """
     current_app.logger.info('[STEP] local_calculation')
     local_result, nr_samples = local_computation()
+    redis_set('local_result', local_result)
     if redis_get('is_coordinator'):
         # if this is the coordinator, directly add the local result and number of samples to the global_data list
         global_data = redis_get('global_data')
@@ -72,10 +74,11 @@ def broadcast_results():
 
 def write_output():
     """
-    Write the global results to the output directory.
+    Write the results to the output directory.
     :return: None
     """
-    write_results(redis_get('global_result'))
+    write_result(bytes.fromhex(redis_get('local_result')), redis_get('local_result_output_filename'))
+    write_result(bytes.fromhex(redis_get('global_result')), redis_get('global_result_output_filename'))
     current_app.logger.info('[STATUS] Finalize client')
     if redis_get('is_coordinator'):
         # The coordinator is already finished now

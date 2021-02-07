@@ -2,3 +2,5 @@ venv/
 debug.log
 .idea
 __pycache__
+fc_app/interaction_networks/*.tsv
+fc_app/interaction_networks/source/

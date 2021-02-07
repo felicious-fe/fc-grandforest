@@ -2,6 +2,8 @@ from flask import current_app
 
 from redis_util import redis_set, redis_get, set_step, get_step
 
+import sys
+
 
 def receive_client_data(client_data):
     """
@@ -16,7 +18,7 @@ def receive_client_data(client_data):
         global_data = redis_get('global_data')
         global_data.append(client_data['data'])
         redis_set('global_data', global_data)
-        current_app.logger.info('[DATA] ' + str(global_data))
+        current_app.logger.info('[DATA] ' + str(sys.getsizeof(global_data)))
     else:
         # Get Finished flags of the clients
         finish = redis_get('finished')
@@ -33,7 +35,7 @@ def receive_coordinator_data(coordinator_data):
     # Get global result from coordinator (as client)
     current_app.logger.info('[DATA] Receive data from coordinator')
     redis_set('global_result', coordinator_data['global_result'])
-    current_app.logger.info('[DATA] ' + str(redis_get('global_result')))
+    current_app.logger.info('[DATA] ' + str(sys.getsizeof(redis_get('global_result'))))
     set_step('write_output')
 
 
