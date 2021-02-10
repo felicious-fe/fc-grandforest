@@ -2,9 +2,10 @@ from flask import current_app
 
 from redis_util import redis_set, redis_get
 
-import subprocess
 import os
 import sys
+
+from fc_app.RSubprocess import RSubprocess
 
 
 def compute_grandforest_model(expression_data, interaction_network):
@@ -32,13 +33,10 @@ def compute_grandforest_model(expression_data, interaction_network):
 				   str(redis_get('number_of_trees')),
 				   '/app/temp/local_model.RData']
 
-	subprocess_result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-	current_app.logger.info(subprocess_result.stdout)
-
-	if subprocess_result.returncode != 0:
-		current_app.logger.error(subprocess_result.stderr)
-		current_app.logger.error('[IO] Local Model Calculation Aborted.',
-								 ChildProcessError("Subprocess returned " + str(subprocess_result.returncode)))
+	local_computation_subprocess = RSubprocess(command)
+	current_app.logger.info('[ALGO] Starting RSubprocess to calculate local GrandForest model')
+	local_computation_subprocess.start()
+	local_computation_subprocess.join()
 
 	os.remove('/app/temp/expression_data.RData')
 	os.remove('/app/temp/interaction_network.RData')
@@ -58,15 +56,13 @@ def aggregate_grandforest_models(global_data):
 	"""
 
 	open('/app/temp/global_model', 'wb').write(bytes.fromhex(global_data[0][0]))
+	current_app.logger.info('[ALGO] Starting RSubprocess to aggregate the GrandForest models')
 	for i in range(1, len(global_data)):
 		open('/app/temp/temp_model', 'wb').write(bytes.fromhex(global_data[i][0]))
 		command = ["/app/fc_app/R/grandforest.sum_models.R", '/app/temp/global_model', '/app/temp/temp_model', '/app/temp/global_model']
-		subprocess_result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-		current_app.logger.info(subprocess_result.stdout)
-
-		if subprocess_result.returncode != 0:
-			current_app.logger.info(subprocess_result.stderr)
-			current_app.logger.error('[IO] Local Model Calculation Aborted.', ChildProcessError("Subprocess returned " + str(subprocess_result.returncode)))
+		model_aggregation_subprocess = RSubprocess(command)
+		model_aggregation_subprocess.start()
+		model_aggregation_subprocess.join()
 
 		os.remove('/app/temp/temp_model')
 

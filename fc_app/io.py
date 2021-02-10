@@ -2,7 +2,7 @@ import yaml
 from flask import current_app
 import sys
 
-import subprocess
+from fc_app.RSubprocess import RSubprocess
 
 from redis_util import redis_get, redis_set
 
@@ -27,14 +27,10 @@ def read_input(redis_identifier):
 				   str(input_separator),
 				   TEMP_DIR + "/" + input_filename + ".RData"]
 
-		subprocess_result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-		current_app.logger.info(subprocess_result.stdout)
-
-		if subprocess_result.returncode != 0:
-			current_app.logger.info(subprocess_result.stderr)
-			current_app.logger.error('[IO] could not read file',
-									 ChildProcessError("Subprocess returned " + str(subprocess_result.returncode)))
-			raise ChildProcessError("Subprocess returned " + str(subprocess_result.returncode))
+		input_reader_subprocess = RSubprocess(command)
+		current_app.logger.info('[IO] Starting RSubprocess to read ' + input_filename)
+		input_reader_subprocess.start()
+		input_reader_subprocess.join()
 
 		data = open(TEMP_DIR + "/" + input_filename + ".RData", 'rb').read()
 
@@ -74,6 +70,11 @@ def read_config():
 	current_app.logger.info('[IO] Read config file.')
 	with open(INPUT_DIR + '/config.yml') as f:
 		config = yaml.load(f, Loader=yaml.FullLoader)['fc_grandforest']
+
+		# TODO
+		#if redis_get('is_coordinator'):
+		#	redis_set('number_of_trees', config['options_coordinator']['number_of_trees'])
+		#	redis_set('interaction_network_filename', config['options_coordinator']['interaction_network'])
 
 		redis_set('grandforest_method', config['options']['grandforest_method'])
 		if not redis_get('grandforest_method') == 'supervised' or redis_get('grandforest_method') == 'unsupervised':
