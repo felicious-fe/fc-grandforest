@@ -30,9 +30,13 @@ def read_input(redis_identifier):
 		input_reader_subprocess = RSubprocess(command)
 		current_app.logger.info('[IO] Starting RSubprocess to read ' + input_filename)
 		input_reader_subprocess.start()
+		current_app.logger.info('[IO] Started RSubprocess to read ' + input_filename)
 		input_reader_subprocess.join()
+		current_app.logger.info('[IO] Finished RSubprocess to read ' + input_filename)
 
 		data = open(TEMP_DIR + "/" + input_filename + ".RData", 'rb').read()
+		current_app.logger.info('[IO] Converted RSubprocess Result to a python binary object')
+
 
 		current_app.logger.info(
 			'[IO] Read R Dataframe with size ' + str(sys.getsizeof(data)) + 'Bytes')
