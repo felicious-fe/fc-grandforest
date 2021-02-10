@@ -1,12 +1,13 @@
 fc_grandforest:
-  options:
+  coordinator_options:
     grandforest_method: supervised
     number_of_trees: 10000
+    interaction_network: biogrid.tsv
+    interaction_network_separator: "\t"
+  local_options:
     expression_data_dependent_variable_name: os_event
     expression_data_separator: ";"
-    interaction_network_separator: "\t"
-  files:
+  local_files:
     expression_data: expression_data.csv
-    interaction_network: interaction_network.csv
     local_result_output_filename: local_model.RData
     global_result_output_filename: global_model.RData

@@ -28,7 +28,7 @@ def read_input(redis_identifier):
 				   TEMP_DIR + "/" + input_filename + ".RData"]
 
 		input_reader_subprocess = RSubprocess(command)
-		current_app.logger.info('[IO] Starting RSubprocess to read ' + input_filename)
+		current_app.logger.info('[IO] Starting RSubprocess to read ' + input_filename + '...')
 		input_reader_subprocess.start()
 		current_app.logger.info('[IO] Started RSubprocess to read ' + input_filename)
 		input_reader_subprocess.join()
@@ -75,21 +75,18 @@ def read_config():
 	with open(INPUT_DIR + '/config.yml') as f:
 		config = yaml.load(f, Loader=yaml.FullLoader)['fc_grandforest']
 
-		# TODO
-		#if redis_get('is_coordinator'):
-		#	redis_set('number_of_trees', config['options_coordinator']['number_of_trees'])
-		#	redis_set('interaction_network_filename', config['options_coordinator']['interaction_network'])
+		if redis_get('is_coordinator'):
+			redis_set('number_of_trees', config['coordinator_options']['number_of_trees'])
+			redis_set('interaction_network_filename', config['coordinator_options']['interaction_network'])
+			redis_set('interaction_network_separator', config['coordinator_options']['interaction_network_separator'])
 
 		redis_set('grandforest_method', config['options']['grandforest_method'])
 		if not redis_get('grandforest_method') == 'supervised' or redis_get('grandforest_method') == 'unsupervised':
 			current_app.logger.error('[IO] Config File Error.',
 									 ValueError("grandforest_method can either be 'supervised' or 'unsupervised'"))
-		redis_set('number_of_trees', config['options']['number_of_trees'])
 		redis_set('expression_data_dependent_variable_name', config['options']['expression_data_dependent_variable_name'])
 		redis_set('expression_data_separator', config['options']['expression_data_separator'])
-		redis_set('interaction_network_separator', config['options']['interaction_network_separator'])
 
 		redis_set('expression_data_filename', config['files']['expression_data'])
-		redis_set('interaction_network_filename', config['files']['interaction_network'])
 		redis_set('local_result_output_filename', config['files']['local_result_output_filename'])
 		redis_set('global_result_output_filename', config['files']['global_result_output_filename'])

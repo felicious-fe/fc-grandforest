@@ -11,8 +11,8 @@ from fc_app.RSubprocess import RSubprocess
 def compute_grandforest_model(expression_data, interaction_network):
 	"""
 	Compute the local model and number of samples
-	:param local_data: Local expression data
-	:param network: Interaction Network (should be the same over the whole experiment)
+	:param expression_data: Local expression data
+	:param interaction_network: Interaction Network
 	:return: The local model and number of samples
 	"""
 
@@ -34,9 +34,11 @@ def compute_grandforest_model(expression_data, interaction_network):
 				   '/app/temp/local_model.RData']
 
 	local_computation_subprocess = RSubprocess(command)
-	current_app.logger.info('[ALGO] Starting RSubprocess to calculate local GrandForest model')
+	current_app.logger.info('[ALGO] Starting RSubprocess to calculate local GrandForest model...')
 	local_computation_subprocess.start()
+	current_app.logger.info('[ALGO] Started RSubprocess to calculate local GrandForest model')
 	local_computation_subprocess.join()
+	current_app.logger.info('[ALGO] Finished RSubprocess to calculate local GrandForest model')
 
 	os.remove('/app/temp/expression_data.RData')
 	os.remove('/app/temp/interaction_network.RData')
@@ -56,7 +58,7 @@ def aggregate_grandforest_models(global_data):
 	"""
 
 	open('/app/temp/global_model', 'wb').write(bytes.fromhex(global_data[0][0]))
-	current_app.logger.info('[ALGO] Starting RSubprocess to aggregate the GrandForest models')
+	current_app.logger.info('[ALGO] Starting RSubprocesses to aggregate the GrandForest models...')
 	for i in range(1, len(global_data)):
 		open('/app/temp/temp_model', 'wb').write(bytes.fromhex(global_data[i][0]))
 		command = ["/app/fc_app/R/grandforest.sum_models.R", '/app/temp/global_model', '/app/temp/temp_model', '/app/temp/global_model']
@@ -65,6 +67,8 @@ def aggregate_grandforest_models(global_data):
 		model_aggregation_subprocess.join()
 
 		os.remove('/app/temp/temp_model')
+
+	current_app.logger.info('[ALGO] Finished RSubprocesses to aggregate the GrandForest models')
 
 	global_result = open('/app/temp/global_model', 'rb').read().hex()
 	os.remove('/app/temp/global_model')
