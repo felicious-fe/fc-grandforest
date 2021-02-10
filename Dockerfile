@@ -1,16 +1,15 @@
-FROM python:3.8
+FROM python:3.7-slim-stretch
 
 RUN apt-get update
-RUN apt-get upgrade -y
-RUN apt-get install -y redis-server supervisor nginx r-cran-devtools r-cran-forcats r-cran-readr
+RUN apt-get install -y supervisor nginx r-cran-devtools r-cran-forcats r-cran-readr
 
 RUN pip3 install --upgrade pip
 RUN pip3 install gunicorn
 RUN R -e "devtools::install_github(\"simonlarsen/grandforest\")"
 
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-COPY nginx/default /etc/nginx/sites-available/default
-COPY docker-entrypoint.sh /entrypoint.sh
+COPY server_config/supervisord.conf /supervisord.conf
+COPY server_config/nginx /etc/nginx/sites-available/default
+COPY server_config/docker-entrypoint.sh /entrypoint.sh
 
 COPY . /app
 
