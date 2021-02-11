@@ -1,5 +1,5 @@
 fc_grandforest:
-  coordinator_options:
+  global_options:
     grandforest_method: supervised
     number_of_trees: 10000
     interaction_network: biogrid.tsv

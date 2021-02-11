@@ -1,4 +1,4 @@
-FROM python:3.7-slim-stretch
+FROM python:3.8
 
 RUN apt-get update
 RUN apt-get install -y supervisor nginx r-cran-devtools r-cran-forcats r-cran-readr
