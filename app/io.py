@@ -60,7 +60,7 @@ def write_binary_file(data, filename):
 	output_filepath = OUTPUT_DIR + '/' + filename
 
 	try:
-		print("[IO] Write results to output folder.")
+		print("[IO] Writing results to output folder.")
 		output_file_writer = open(output_filepath, 'wb')
 		output_file_writer.write(data)
 		output_file_writer.close()
@@ -77,6 +77,10 @@ def read_config(is_coordinator):
 	print('[IO] Read config file.')
 	with open(INPUT_DIR + '/config.yml') as f:
 		config_file = yaml.load(f, Loader=yaml.FullLoader)['fc_grandforest']
+
+		config.add_option('INPUT_DIR', INPUT_DIR)
+		config.add_option('TEMP_DIR', TEMP_DIR)
+		config.add_option('OUTPUT_DIR', OUTPUT_DIR)
 
 		# TODO set global options
 		if True:

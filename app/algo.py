@@ -1,3 +1,4 @@
+import base64
 import os
 import sys
 
@@ -41,8 +42,13 @@ def compute_local_grandforest_model(expression_data, interaction_network):
 	os.remove('/app/temp/expression_data.RData')
 	os.remove('/app/temp/interaction_network.RData')
 
-	local_model = open('/app/temp/local_model.RData', 'rb').read().hex()
-	nr_samples = 0  # TODO
+	# save local model as hexadecimal string
+	local_model = base64.b64encode(open('/app/temp/local_model.RData', 'rb').read()).decode('utf-8')
+
+	# save amount of lines - 1 (header line) as weighting constant
+	with open(config.get_option('INPUT_DIR') + '/' + config.get_option('expression_data_filename')) as expression_data_file:
+		nr_samples = sum(1 for line in expression_data_file) - 1
+
 	print(f'[API] Local computation of client {config.get_option("id")}: {sys.getsizeof(local_model)} Bytes with {nr_samples} samples successful')
 
 	return local_model, nr_samples
@@ -55,10 +61,10 @@ def aggregate_grandforest_models(global_data):
 	:return: global result
 	"""
 
-	open('/app/temp/global_model', 'wb').write(bytes.fromhex(global_data[0][0]))
+	open('/app/temp/global_model', 'wb').write(base64.decodebytes(global_data[0].encode('utf-8')))
 	print('[ALGO] Starting RSubprocesses to aggregate the GrandForest models...')
 	for i in range(1, len(global_data)):
-		open('/app/temp/temp_model', 'wb').write(bytes.fromhex(global_data[i][0]))
+		open('/app/temp/temp_model', 'wb').write(base64.decodebytes(global_data[i].encode('utf-8')))
 		command = ["/app/app/R/grandforest.sum_models.R", '/app/temp/global_model', '/app/temp/temp_model', '/app/temp/global_model']
 		model_aggregation_subprocess = RSubprocess(command)
 		model_aggregation_subprocess.start()
@@ -68,7 +74,7 @@ def aggregate_grandforest_models(global_data):
 
 	print('[ALGO] Finished RSubprocesses to aggregate the GrandForest models')
 
-	global_model = open('/app/temp/global_model', 'rb').read().hex()
+	global_model = base64.b64encode(open('/app/temp/global_model', 'rb').read()).decode('utf-8')
 	os.remove('/app/temp/global_model')
 	print(
 		f'[API] Global Aggregation on client {config.get_option("id")}: {sys.getsizeof(global_model)} Bytes successful')
@@ -79,7 +85,7 @@ def aggregate_grandforest_models(global_data):
 def local_computation():
 	expression_data = read_input(config.get_option('expression_data_filename'), config.get_option('expression_data_separator'))
 	interaction_network = read_input(config.get_option('interaction_network_filename'), config.get_option('interaction_network_separator'))
-	local_model = compute_local_grandforest_model(expression_data, interaction_network)
+	local_model, nr_samples = compute_local_grandforest_model(expression_data, interaction_network)
 	return local_model
 
 
@@ -93,5 +99,5 @@ def write_results(local_model, global_model):
 	Write the results to the output directory.
 	:return: None
 	"""
-	write_binary_file(bytes.fromhex(local_model), config.get_option('local_result_output_filename'))
-	write_binary_file(bytes.fromhex(global_model), config.get_option('global_result_output_filename'))
+	write_binary_file(base64.decodebytes(global_model.encode('utf-8')), config.get_option('global_result_output_filename'))
+	write_binary_file(base64.decodebytes(local_model.encode('utf-8')), config.get_option('local_result_output_filename'))

@@ -94,6 +94,7 @@ class AppLogic:
                 else:
                     if len(self.data_incoming) > 0:
                         self.global_result = self.data_incoming[0]
+                        print(self.data_incoming[0])
                         print(f'[CLIENT] Received result from master', flush=True)
                         state = state_finishing
 
@@ -123,8 +124,9 @@ class AppLogic:
 
             if state == state_finishing:
                 self.progress = 'finishing...'
-                write_results(self.global_result, self.local_result)
+                write_results(self.local_result, self.global_result)
                 time.sleep(10)
+                print(f'[CLIENT/COORDINATOR] Finished the workflow, exiting...', flush=True)
                 self.status_finished = True
                 break
 
