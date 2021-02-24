@@ -7,12 +7,29 @@ library(grandforest)
 
 args <- commandArgs(trailingOnly=TRUE)
 
-interaction_network <- read.csv(args[2], sep='\t')
-expression_data <- data.frame(read_csv2(args[1]))
+interaction_network_file <- args[2]
+expression_data_file <- args[1]
 num.trees <- args[3]
+output_file <- args[4]
 
+
+print('[R] Loading data from RData files')
+load(interaction_network_file)
+interaction_network <- data
+data <- NULL
+str(interaction_network)
+
+load(expression_data_file)
+expression_data <- data
+data <- NULL
+str(expression_data)
+
+print('[R] Executing GrandForest unsupervised')
 model <- grandforest_unsupervised(data=expression_data,
                                   graph_data=interaction_network,
                                   num.trees=num.trees)
 
-save(model, file=args[4])
+print('[R] Saving model to RData file')
+save(model, file=output_file)
+
+print('[R] Done')

@@ -1,3 +1,4 @@
+import base64
 import errno
 import yaml
 import sys
@@ -11,23 +12,17 @@ TEMP_DIR = "/app/temp"
 OUTPUT_DIR = "/mnt/output"
 
 
-def read_input(input_filename, input_separator):
+def read_input(input_filepath, input_filename, input_separator):
 	"""
 	Read in the input data from the input directory
 	:return: Data or None if File could not be read
 	"""
 
 	try:
-		os.makedirs(TEMP_DIR)
-	except OSError as e:
-		if e.errno != errno.EEXIST:
-			raise
-
-	try:
-		print('[IO] Parsing data of ' + INPUT_DIR + '/' + input_filename)
+		print('[IO] Parsing data of ' + input_filepath)
 
 		command = ["/app/app/R/grandforest.read_data_frame.R",
-				   INPUT_DIR + "/" + input_filename,
+				   input_filepath,
 				   str(input_separator),
 				   TEMP_DIR + "/" + input_filename + ".RData"]
 
@@ -50,6 +45,29 @@ def read_input(input_filename, input_separator):
 		return None
 
 
+def write_output(data, output_directory_name):
+	# create output directory
+	try:
+		os.makedirs('OUTPUT_DIR' + '/' + output_directory_name)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			print(f'[CRIT] Could not create temporary directory', flush=True)
+			raise
+
+	write_binary_file(base64.decodebytes(data.encode('utf-8')),
+					  OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData')
+
+	#TODO: remove when implementing controller=client template
+	if not config.get_option('is_coordinator'):
+		command = ["/app/app/R/grandforest.analyze_results.R",
+				   OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData',
+				   TEMP_DIR + '/' + 'interaction_network.RData',
+				   OUTPUT_DIR + '/' + output_directory_name + '/']
+		analyzing_results_subprocess = RSubprocess(command)
+		analyzing_results_subprocess.start()
+		analyzing_results_subprocess.join()
+
+
 def write_binary_file(data, filename):
 	"""
 	Write the results to the output directory
@@ -57,18 +75,16 @@ def write_binary_file(data, filename):
 	:param filename: output filename
 	:return: None
 	"""
-	output_filepath = OUTPUT_DIR + '/' + filename
-
 	try:
 		print("[IO] Writing results to output folder.")
-		output_file_writer = open(output_filepath, 'wb')
+		output_file_writer = open(filename, 'wb')
 		output_file_writer.write(data)
 		output_file_writer.close()
 	except Exception as e:
 		print('[ERROR] Could not write result file ', filename, '.', e)
 
 
-def read_config(is_coordinator):
+def read_config():
 	"""
 	Read in the config.yml in the input directory. Save the parameters in redis.
 	:return: None
@@ -86,15 +102,33 @@ def read_config(is_coordinator):
 		if True:
 			config.add_option('grandforest_method', config_file['global_options']['grandforest_method'])
 			config.add_option('number_of_trees', config_file['global_options']['number_of_trees'])
-			config.add_option('interaction_network_filename', config_file['global_options']['interaction_network'])
-			config.add_option('interaction_network_separator',
-							  config_file['global_options']['interaction_network_separator'])
+			if config_file['global_options']['interaction_network'] == 'biogrid':
+				config.add_option('interaction_network_filename', 'biogrid')
+				config.add_option('interaction_network_filepath', '/app/interaction_networks/biogrid.tsv')
+				config.add_option('interaction_network_separator', '\t')
+			elif config_file['global_options']['interaction_network'] == 'htridb':
+				config.add_option('interaction_network_filename', 'htridb')
+				config.add_option('interaction_network_filepath', '/app/interaction_networks/htridb.tsv')
+				config.add_option('interaction_network_separator', '\t')
+			elif config_file['global_options']['interaction_network'] == 'iid':
+				config.add_option('interaction_network_filename', 'iid')
+				config.add_option('interaction_network_filepath', '/app/interaction_networks/iid.tsv')
+				config.add_option('interaction_network_separator', '\t')
+			elif config_file['global_options']['interaction_network'] == 'regnetwork':
+				config.add_option('interaction_network_filename', 'regnetwork')
+				config.add_option('interaction_network_filepath', '/app/interaction_networks/regnetwork.tsv')
+				config.add_option('interaction_network_separator', '\t')
+			else:
+				config.add_option('interaction_network_filename', config_file['global_options']['interaction_network'])
+				config.add_option('interaction_network_filepath', INPUT_DIR + '/' + config_file['global_options']['interaction_network'])
+				config.add_option('interaction_network_separator', config_file['global_options']['interaction_network_separator'])
 
 		config.add_option('expression_data_dependent_variable_name',
 						  config_file['local_options']['expression_data_dependent_variable_name'])
 		config.add_option('expression_data_separator', config_file['local_options']['expression_data_separator'])
 
 		config.add_option('expression_data_filename', config_file['local_files']['expression_data'])
+		config.add_option('expression_data_filepath', INPUT_DIR + '/' + config_file['local_files']['expression_data'])
 		config.add_option('local_result_output_filename', config_file['local_files']['local_result_output_filename'])
 		config.add_option('global_result_output_filename', config_file['local_files']['global_result_output_filename'])
 

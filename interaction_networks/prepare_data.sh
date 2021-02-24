@@ -4,6 +4,15 @@ if [[ ! -d "source" ]]; then
     mkdir "source"
 fi
 
+# Exit the script if the networks are newer than 30 days
+max_mod_date=$(date -d 'now - 30 days' +%s)
+actual_mod_date=$(date -r "biogrid.tsv" +%s)
+
+if (( actual_mod_date > max_mod_date )); then
+  echo "biogrid.tsv is newer than 30 days, nothing to do."
+  exit 0
+fi
+
 FIRST_LINE="id1\tid2\tsymbol1\tsymbol2\tpubmedid"
 
 # BioGRID Source File:

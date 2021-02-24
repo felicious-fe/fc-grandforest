@@ -1,6 +1,8 @@
 import json
 import threading
 import time
+import os
+import errno
 
 from app.io import read_config
 from app.algo import local_computation, global_aggregation, write_results
@@ -58,11 +60,12 @@ class AppLogic:
 
         # === States ===
         state_initializing = 1
-        state_local_gather = 2
-        state_local_computation = 3
-        state_global_gather = 4
-        state_global_computation = 5
-        state_finishing = 6
+        state_wait_for_config = 2
+        state_local_gather = 3
+        state_local_computation = 4
+        state_global_gather = 5
+        state_global_computation = 6
+        state_finishing = 7
 
         # Initial state
         state = state_initializing
@@ -74,14 +77,25 @@ class AppLogic:
                 if self.id is not None:  # Test if setup has happened already
                     config.init()  # initialize config dictionary
                     config.add_option('id', self.id)
+                    config.add_option('is_coordinator', self.master)
+                    read_config()
+
                     if self.master:
-                        read_config(is_coordinator=True)
+
                         # Go to global part
                         state = state_global_gather
                     else:
-                        read_config(is_coordinator=False)
+
                         # Go to local part
                         state = state_local_gather
+
+                    # create temp directory for python <-> R data exchange
+                    try:
+                        os.makedirs(config.get_option('TEMP_DIR'))
+                    except OSError as e:
+                        if e.errno != errno.EEXIST:
+                            print(f'[CRIT] Could not create temporary directory', flush=True)
+                            raise
 
             # LOCAL PART
 
@@ -94,7 +108,6 @@ class AppLogic:
                 else:
                     if len(self.data_incoming) > 0:
                         self.global_result = self.data_incoming[0]
-                        print(self.data_incoming[0])
                         print(f'[CLIENT] Received result from master', flush=True)
                         state = state_finishing
 
