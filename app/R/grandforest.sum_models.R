@@ -62,6 +62,6 @@ load(args[2])
 forest2 <- model
 model <- NULL
 
-model <- grandforest.sum_models(forest1, forest2)
+model <- grandforest_sum_models(forest1, forest2)
 
 save(model, file=args[3])
