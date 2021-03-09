@@ -7,8 +7,9 @@ RUN pip3 install --upgrade pip
 RUN pip3 install gunicorn
 
 # Install required R packages
-# It's better to install packages as binary package via apt-get than to compile them in R
-RUN apt-get install -y r-cran-devtools r-cran-tidyverse r-cran-biocmanager
+# It's better/faster/more stable to install packages as binary package via apt-get than to compile them in R, but they are versioned very conservatively
+RUN apt-get install -y r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager
+RUN R -e "install.packages(\"dplyr\")"
 RUN R -e "BiocManager::install(\"org.Hs.eg.db\", update = FALSE, ask = FALSE)"
 RUN R -e "install.packages(\"geomnet\")"
 

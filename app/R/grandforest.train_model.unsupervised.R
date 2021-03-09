@@ -29,6 +29,9 @@ model <- grandforest_unsupervised(data=expression_data,
                                   graph_data=interaction_network,
                                   num.trees=num.trees)
 
+model$forest$independent.variable.names <- as.character(sapply(model$forest$independent.variable.names, function(x) {substring(x, 2)}))
+names(model$variable.importance) <- as.character(sapply(names(model$variable.importance), function(x) {substring(x, 2)}))
+
 print('[R] Saving model to RData file')
 save(model, file=output_file)
 

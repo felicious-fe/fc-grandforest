@@ -1,11 +1,12 @@
 import base64
 import errno
-import yaml
-import sys
 import os
+import sys
 
-from app.RSubprocess import RSubprocess
+import yaml
+
 from app import config
+from app.RSubprocess import RSubprocess
 
 INPUT_DIR = "/mnt/input"
 TEMP_DIR = "/app/temp"
@@ -33,7 +34,7 @@ def read_input(input_filepath, input_filename, input_separator):
 		input_reader_subprocess.join()
 		print('[IO] Finished RSubprocess to read ' + input_filename)
 
-		data = open(TEMP_DIR + "/" + input_filename + ".RData", 'rb').read()
+		data = base64.b64encode(open(TEMP_DIR + "/" + input_filename + ".RData", 'rb').read()).decode('utf-8')
 		print('[IO] Converted RSubprocess Result to a python binary object')
 
 		print('[IO] Read R Dataframe with size ' + str(sys.getsizeof(data)) + 'Bytes')
@@ -47,25 +48,22 @@ def read_input(input_filepath, input_filename, input_separator):
 
 def write_output(data, output_directory_name):
 	# create output directory
-	try:
-		os.makedirs('OUTPUT_DIR' + '/' + output_directory_name)
-	except OSError as e:
-		if e.errno != errno.EEXIST:
-			print(f'[CRIT] Could not create temporary directory', flush=True)
-			raise
+	os.mkdir(OUTPUT_DIR + '/' + output_directory_name)
 
 	write_binary_file(base64.decodebytes(data.encode('utf-8')),
 					  OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData')
 
-	#TODO: remove when implementing controller=client template
-	if not config.get_option('is_coordinator'):
-		command = ["/app/app/R/grandforest.analyze_results.R",
-				   OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData',
-				   TEMP_DIR + '/' + 'interaction_network.RData',
-				   OUTPUT_DIR + '/' + output_directory_name + '/']
-		analyzing_results_subprocess = RSubprocess(command)
-		analyzing_results_subprocess.start()
-		analyzing_results_subprocess.join()
+	command = ["/app/app/R/grandforest.analyze_results.R",
+			   OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData',
+			   TEMP_DIR + '/' + 'interaction_network.RData',
+			   OUTPUT_DIR + '/' + output_directory_name + '/']
+
+	print('[IO] Starting RSubprocess to analyze the ' + output_directory_name + '...')
+	analyzing_results_subprocess = RSubprocess(command)
+	analyzing_results_subprocess.start()
+	print('[IO] Started RSubprocess to analyze the ' + output_directory_name)
+	analyzing_results_subprocess.join()
+	print('[IO] Finished RSubprocess to analyze the ' + output_directory_name)
 
 
 def write_binary_file(data, filename):
@@ -84,7 +82,7 @@ def write_binary_file(data, filename):
 		print('[ERROR] Could not write result file ', filename, '.', e)
 
 
-def read_config():
+def read_config(is_coordinator):
 	"""
 	Read in the config.yml in the input directory. Save the parameters in redis.
 	:return: None
@@ -120,8 +118,10 @@ def read_config():
 				config.add_option('interaction_network_separator', '\t')
 			else:
 				config.add_option('interaction_network_filename', config_file['global_options']['interaction_network'])
-				config.add_option('interaction_network_filepath', INPUT_DIR + '/' + config_file['global_options']['interaction_network'])
-				config.add_option('interaction_network_separator', config_file['global_options']['interaction_network_separator'])
+				config.add_option('interaction_network_filepath',
+								  INPUT_DIR + '/' + config_file['global_options']['interaction_network'])
+				config.add_option('interaction_network_separator',
+								  config_file['global_options']['interaction_network_separator'])
 
 		config.add_option('expression_data_dependent_variable_name',
 						  config_file['local_options']['expression_data_dependent_variable_name'])

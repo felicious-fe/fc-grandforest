@@ -11,7 +11,7 @@ args <- commandArgs(trailingOnly=TRUE)
 
 forest1_input_file <- args[1]
 forest2_input_file <- args[2]
-output_file <- args[4]
+output_file <- args[3]
 
 print('[R] Loading models from RData files')
 
