@@ -4,6 +4,7 @@
 # grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees seed result_forest.RData
 
 suppressPackageStartupMessages({
+  require(dplyr)
   require(grandforest)
 })
 

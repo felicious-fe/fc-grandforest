@@ -4,7 +4,7 @@ fc_grandforest:
     grandforest_treetype: survival  # classification, regression, survival or probability
     number_of_trees: 10000
     seed: 2021
-    interaction_network: biogrid  # biogrid, htridb, iid, regnetwork or filepath
+    interaction_network: biogrid.tsv  # biogrid, htridb, iid, regnetwork or filepath
     interaction_network_separator: "\t"  # only used with filepath
   local_options:
     prediction: True  # boolean
