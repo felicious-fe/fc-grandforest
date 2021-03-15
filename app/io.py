@@ -96,10 +96,11 @@ def read_config(is_coordinator):
 		config.add_option('TEMP_DIR', TEMP_DIR)
 		config.add_option('OUTPUT_DIR', OUTPUT_DIR)
 
-		# TODO set global options
-		if True:
+		if is_coordinator:
 			config.add_option('grandforest_method', config_file['global_options']['grandforest_method'])
+			config.add_option('grandforest_treetype', config_file['global_options']['grandforest_treetype'])
 			config.add_option('number_of_trees', config_file['global_options']['number_of_trees'])
+			config.add_option('seed', config_file['global_options']['seed'])
 			if config_file['global_options']['interaction_network'] == 'biogrid':
 				config.add_option('interaction_network_filename', 'biogrid')
 				config.add_option('interaction_network_filepath', '/app/interaction_networks/biogrid.tsv')
@@ -123,17 +124,45 @@ def read_config(is_coordinator):
 				config.add_option('interaction_network_separator',
 								  config_file['global_options']['interaction_network_separator'])
 
-		config.add_option('expression_data_dependent_variable_name',
-						  config_file['local_options']['expression_data_dependent_variable_name'])
-		config.add_option('expression_data_separator', config_file['local_options']['expression_data_separator'])
+			# Check if coordinator config options are set correctly
+			if not config.get_option('grandforest_method') in {'supervised', 'unsupervised'}:
+				print('[IO] Config File Error.')
+				raise ValueError("grandforest_method can either be 'supervised' or 'unsupervised'")
 
+			if not config.get_option('grandforest_treetype') in {'classification', 'regression', 'survival',
+																 'probability'}:
+				print('[IO] Config File Error.')
+				raise ValueError(
+					"grandforest_treetype can be 'classification', 'regression', 'survival' or 'probability'")
+
+		# Client config options
+		# local options
+		if str(config_file['local_options']['prediction']) == 'True':
+			config.add_option('prediction', True)
+		elif str(config_file['local_options']['prediction']) == 'False':
+			config.add_option('prediction', False)
+		else:
+			print('[IO] Config File Error.')
+			raise ValueError("prediction can be 'True' or 'False'")
+
+		# local files
+		try:
+			config.add_option('expression_data_dependent_variable_name',
+						  config_file['local_files']['expression_data_dependent_variable_name'])
+		except KeyError:
+			pass
+
+		try:
+			config.add_option('expression_data_survival_event',
+						  config_file['local_files']['expression_data_survival_event'])
+			config.add_option('expression_data_survival_time',
+							  config_file['local_files']['expression_data_survival_time'])
+		except KeyError:
+			pass
+
+		config.add_option('expression_data_separator', config_file['local_files']['expression_data_separator'])
 		config.add_option('expression_data_filename', config_file['local_files']['expression_data'])
 		config.add_option('expression_data_filepath', INPUT_DIR + '/' + config_file['local_files']['expression_data'])
-		config.add_option('local_result_output_filename', config_file['local_files']['local_result_output_filename'])
-		config.add_option('global_result_output_filename', config_file['local_files']['global_result_output_filename'])
-
-		# Check if config options are set correctly
-		if not config.get_option('grandforest_method') == 'supervised' or config.get_option(
-				'grandforest_method') == 'unsupervised':
-			print('[IO] Config File Error.')
-			raise ValueError("grandforest_method can either be 'supervised' or 'unsupervised'")
+		# split
+		config.add_option('split_mode', config_file['split']['mode'])
+		config.add_option('split_dir', config_file['split']['dir'])

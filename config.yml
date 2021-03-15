@@ -1,13 +1,19 @@
 fc_grandforest:
   global_options:
-    grandforest_method: supervised
+    grandforest_method: supervised  # supervised or unsupervised
+    grandforest_treetype: classification  # classification, regression, survival or probability; unsupervised grandforest is always classification
     number_of_trees: 10000
-    interaction_network: biogrid.tsv
-    interaction_network_separator: "\t"
+    seed: None  # Allowed Values: "None" or int
+    interaction_network: biogrid.tsv  # biogrid, htridb, iid, regnetwork or filepath
+    interaction_network_separator: "\t"  # only used with filepath
   local_options:
-    expression_data_dependent_variable_name: os_event
-    expression_data_separator: ";"
+    prediction: True  # boolean
   local_files:
-    expression_data: expression_data.csv
-    local_result_output_filename: local_model.RData
-    global_result_output_filename: global_model.RData
+    expression_data: expression_data.csv  # filepath
+    expression_data_dependent_variable_name: mol_subt  # single classifying variable used with supervised classification, regression, and probability; not for survival nor unsupervised
+    expression_data_survival_event: os_event  # only used in supervised survival
+    expression_data_survival_time: os_time  # only used in supervised survival
+    expression_data_separator: ";"
+  split:
+    mode: file  # file or directory
+    dir: . # data or .

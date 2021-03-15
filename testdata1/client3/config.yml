@@ -1,0 +1,18 @@
+fc_grandforest:
+  global_options:
+    grandforest_method: unsupervised  # supervised or unsupervised
+    grandforest_treetype: survival  # classification, regression, survival or probability
+    number_of_trees: 10000
+    seed: 2021
+    interaction_network: biogrid  # biogrid, htridb, iid, regnetwork or filepath
+    interaction_network_separator: "\t"  # only used with filepath
+  local_options:
+    prediction: True  # boolean
+  local_files:
+    expression_data: expression_data.csv  # filepath
+    expression_data_survival_event: os_event  # only used in survival
+    expression_data_survival_time: os_time  # only used in survival
+    expression_data_separator: ";"
+  split:
+    mode: file  # file or directory
+    dir: . # data or .

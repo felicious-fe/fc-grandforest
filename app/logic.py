@@ -7,7 +7,7 @@ import threading
 import time
 
 from app import config
-from app.algo import local_computation, global_aggregation, write_results
+from app.algo import local_computation, global_aggregation, local_prediction, write_results
 from app.io import read_config, read_input
 
 
@@ -108,7 +108,9 @@ class AppLogic:
 														  config.get_option('interaction_network_separator'))
 					print(f'[COORDINATOR] Sending interaction network to clients', flush=True)
 					self.data_outgoing = json.dumps([config.get_option('grandforest_method'),
+													 config.get_option('grandforest_treetype'),
 													 config.get_option('number_of_trees'),
+													 config.get_option('seed'),
 													 self.interaction_network])
 					self.status_available = True
 					state = state_local_computation
@@ -121,9 +123,28 @@ class AppLogic:
 				self.progress = 'gathering config...'
 				if len(self.data_incoming) > 0:
 					config.add_option('grandforest_method', self.data_incoming[0][0])
-					config.add_option('number_of_trees', self.data_incoming[0][1])
-					self.interaction_network = self.data_incoming[0][2]
+					config.add_option('grandforest_treetype', self.data_incoming[0][1])
+					config.add_option('number_of_trees', self.data_incoming[0][2])
+					config.add_option('seed', self.data_incoming[0][3])
+					self.interaction_network = self.data_incoming[0][4]
 					print(f'[CLIENT] Received config and interaction network with size {sys.getsizeof(self.interaction_network)} Bytes from coordinator', flush=True)
+
+					# Check if config is valid
+					if config.get_option('grandforest_method') == "supervised":
+						if config.get_option('grandforest_treetype') == "survival":
+							try:
+								config.get_option('expression_data_dependent_variable_name')
+							except KeyError:
+								print('[LOGIC] Config File Error.')
+								raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
+						else:
+							try:
+								config.get_option('expression_data_survival_event')
+								config.get_option('expression_data_survival_time')
+							except KeyError:
+								print('[LOGIC] Config File Error.')
+								raise ValueError("The GrandForest Layout is invalid: survival time and/or event missing")
+
 					state = state_local_computation
 
 			if state == state_local_computation:
@@ -166,6 +187,8 @@ class AppLogic:
 
 			if state == state_write_results:
 				self.progress = 'writing results...'
+				if config.get_option('prediction'):
+					local_prediction(self.global_model, self.expression_data)
 				write_results(self.local_model, self.global_model)
 				state = state_finish
 

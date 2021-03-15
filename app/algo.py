@@ -25,13 +25,16 @@ def __compute_local_grandforest_model(expression_data, interaction_network):
 				   config.get_option('TEMP_DIR') + '/' + 'expression_data.RData',
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
+				   str(config.get_option('seed')),
 				   str(config.get_option('expression_data_dependent_variable_name')),
+				   str(config.get_option('grandforest_treetype')),
 				   config.get_option('TEMP_DIR') + '/' + 'local_model.RData']
 	else:
 		command = ["/app/app/R/grandforest.train_model.unsupervised.R",
 				   config.get_option('TEMP_DIR') + '/' + 'expression_data.RData',
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
+				   str(config.get_option('seed')),
 				   config.get_option('TEMP_DIR') + '/' + 'local_model.RData']
 
 	local_computation_subprocess = RSubprocess(command)
@@ -89,6 +92,32 @@ def __aggregate_grandforest_models(global_data):
 	return global_model
 
 
+def __predict_with_grandforest_model(global_model, expression_data):
+	open(config.get_option('TEMP_DIR') + '/' + 'global_model.RData', 'wb').write(
+		base64.decodebytes(global_model.encode('utf-8')))
+	open(config.get_option('TEMP_DIR') + '/' + 'expression_data.RData', 'wb').write(
+		base64.decodebytes(expression_data.encode('utf-8')))
+
+	if config.get_option('grandforest_method') == 'supervised':
+		command = ["/app/app/R/grandforest.predict.supervised.R",
+				   config.get_option('TEMP_DIR') + '/' + 'global_model.RData',
+				   config.get_option('TEMP_DIR') + '/' + 'expression_data.RData',
+				   str(config.get_option('expression_data_dependent_variable_name')),
+				   config.get_option('OUTPUT_DIR') + '/']
+	else:
+		command = ["/app/app/R/grandforest.predict.unsupervised.R",
+				   config.get_option('TEMP_DIR') + '/' + 'global_model.RData',
+				   config.get_option('TEMP_DIR') + '/' + 'expression_data.RData',
+				   config.get_option('OUTPUT_DIR') + '/']
+
+	local_prediction_subprocess = RSubprocess(command)
+	print('[ALGO] Starting RSubprocess to predict local expression data with the global GrandForest model...')
+	local_prediction_subprocess.start()
+	print('[ALGO] Started RSubprocess to predict local expression data with the global GrandForest model')
+	local_prediction_subprocess.join()
+	print('[ALGO] Finished RSubprocess to predict local expression data with the global GrandForest model')
+
+
 # Functions exposed to AppLogic
 
 def local_computation(expression_data, interaction_network):
@@ -99,6 +128,10 @@ def local_computation(expression_data, interaction_network):
 def global_aggregation(global_data):
 	global_model = __aggregate_grandforest_models(global_data)
 	return global_model
+
+
+def local_prediction(local_model, expression_data):
+	__predict_with_grandforest_model(local_model, expression_data)
 
 
 def write_results(local_model, global_model):

@@ -3,9 +3,10 @@
 # Execute with args:
 # grandforest.sum_models.R firstForest.RData secondForest.RData resultForest.RData
 
-library(grandforest)
-library(forcats)
-
+suppressPackageStartupMessages({
+  require(grandforest)
+  require(forcats)
+})
 
 args <- commandArgs(trailingOnly=TRUE)
 
