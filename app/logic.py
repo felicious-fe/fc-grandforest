@@ -133,17 +133,17 @@ class AppLogic:
 					if config.get_option('grandforest_method') == "supervised":
 						if config.get_option('grandforest_treetype') == "survival":
 							try:
-								config.get_option('expression_data_dependent_variable_name')
-							except KeyError:
-								print('[LOGIC] Config File Error.')
-								raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
-						else:
-							try:
 								config.get_option('expression_data_survival_event')
 								config.get_option('expression_data_survival_time')
 							except KeyError:
 								print('[LOGIC] Config File Error.')
 								raise ValueError("The GrandForest Layout is invalid: survival time and/or event missing")
+						else:
+							try:
+								config.get_option('expression_data_dependent_variable_name')
+							except KeyError:
+								print('[LOGIC] Config File Error.')
+								raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
 
 					state = state_local_computation
 
