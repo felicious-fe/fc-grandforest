@@ -1,14 +1,13 @@
 FROM python:3.8
 
 # Install required system packages and python modules
-RUN apt-get update
-RUN apt-get install -y supervisor nginx
+RUN apt-get update && apt-get install -y supervisor nginx
 RUN pip3 install --upgrade pip
 RUN pip3 install gunicorn
 
 # Install required R packages
 # It's better/faster/more stable to install packages as binary package via apt-get than to compile them in R, but they are versioned very conservatively
-RUN apt-get install -y r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager
+RUN apt-get update && apt-get install -y r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager
 RUN R -e "install.packages(\"dplyr\")"
 RUN R -e "BiocManager::install(\"org.Hs.eg.db\", update = FALSE, ask = FALSE)"
 RUN R -e "install.packages(\"geomnet\")"
