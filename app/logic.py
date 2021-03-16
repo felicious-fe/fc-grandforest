@@ -35,11 +35,11 @@ class AppLogic:
 		self.thread = None
 		self.iteration = 0
 		self.progress = 'not started yet'
-		self.expression_data = ''
 		self.interaction_network = ''
-		self.local_model = ''
+		self.split_expression_data = {}
+		self.local_models = {}
 		self.client_models = []
-		self.global_model = ''
+		self.global_models = {}
 
 	def handle_setup(self, client_id, master, clients):
 		# This method is called once upon startup and contains information about the execution context of this instance
@@ -62,18 +62,19 @@ class AppLogic:
 
 	def app_flow(self):
 		# This method contains a state machine for the client and coordinator instance
-		# Coordinator Workflow: 1 -> 2 -> 4 -> 5 -> 6 -> 7 -> 8
-		# Client Workflow:      1 -> 2 -> 3 -> 4 -> 5 -> 7 -> 8
+		# Coordinator Workflow: 1 -> 2 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
+		# Client Workflow:      1 -> 3 -> 4 -> 5 -> 7 -> 8 -> 9
 
 		# === States ===
 		state_initialize = 1
-		state_read_input = 2
+		state_read_config = 2
 		state_wait_for_config = 3
-		state_local_computation = 4
-		state_wait_for_global_aggregation = 5
-		state_global_aggregation = 6
-		state_write_results = 7
-		state_finish = 8
+		state_read_input = 4
+		state_local_computation = 5
+		state_wait_for_global_aggregation = 6
+		state_global_aggregation = 7
+		state_write_results = 8
+		state_finish = 9
 
 		# Initial state
 		state = state_initialize
@@ -86,7 +87,10 @@ class AppLogic:
 					config.init()  # initialize config dictionary
 					config.add_option('id', self.id)
 					config.add_option('is_coordinator', self.master)
-					read_config(self.master)
+					self.split_expression_data = read_config(self.master)
+					self.local_models = dict.fromkeys(self.split_expression_data.keys())
+
+					print(self.split_expression_data)
 
 					# create temp directory for python <-> R data exchange
 					try:
@@ -96,12 +100,13 @@ class AppLogic:
 							print(f'[CRIT] Could not create temporary directory', flush=True)
 							raise
 
-					state = state_read_input
+				if self.master:
+					state = state_read_config
+				else:
+					state = state_wait_for_config
 
-			if state == state_read_input:
-				self.expression_data = read_input(config.get_option('expression_data_filepath'),
-												  config.get_option('expression_data_filename'),
-												  config.get_option('expression_data_separator'))
+			if state == state_read_config:
+
 				if self.master:
 					self.interaction_network = read_input(config.get_option('interaction_network_filepath'),
 														  config.get_option('interaction_network_filename'),
@@ -113,7 +118,7 @@ class AppLogic:
 													 config.get_option('seed'),
 													 self.interaction_network])
 					self.status_available = True
-					state = state_local_computation
+					state = state_read_input
 				else:
 					state = state_wait_for_config
 
@@ -128,34 +133,43 @@ class AppLogic:
 					config.add_option('seed', self.data_incoming[0][3])
 					self.interaction_network = self.data_incoming[0][4]
 					print(f'[CLIENT] Received config and interaction network with size {sys.getsizeof(self.interaction_network)} Bytes from coordinator', flush=True)
+					state = state_read_input
 
-					# Check if config is valid
-					if config.get_option('grandforest_method') == "supervised":
-						if config.get_option('grandforest_treetype') == "survival":
-							try:
-								config.get_option('expression_data_survival_event')
-								config.get_option('expression_data_survival_time')
-							except KeyError:
-								print('[LOGIC] Config File Error.')
-								raise ValueError("The GrandForest Layout is invalid: survival time and/or event missing")
-						else:
-							try:
-								config.get_option('expression_data_dependent_variable_name')
-							except KeyError:
-								print('[LOGIC] Config File Error.')
-								raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
-
-					state = state_local_computation
+			if state == state_read_input:
+				for split in self.split_expression_data.keys():
+					self.split_expression_data[split] = read_input(split + '/' + config.get_option('expression_data_filename'),
+													config.get_option('expression_data_filename'),
+													config.get_option('expression_data_separator'))
+				state = state_local_computation
 
 			if state == state_local_computation:
 				self.progress = 'computing...'
-				self.local_model = local_computation(self.expression_data, self.interaction_network)
+
+				# Check if config is valid
+				if config.get_option('grandforest_method') == "supervised":
+					if config.get_option('grandforest_treetype') == "survival":
+						try:
+							config.get_option('expression_data_survival_event')
+							config.get_option('expression_data_survival_time')
+						except KeyError:
+							print('[LOGIC] Config File Error.')
+							raise ValueError("The GrandForest Layout is invalid: survival time and/or event missing")
+					else:
+						try:
+							config.get_option('expression_data_dependent_variable_name')
+						except KeyError:
+							print('[LOGIC] Config File Error.')
+							raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
+
+				for split in self.split_expression_data.keys():
+					self.local_models[split] = local_computation(self.split_expression_data[split], self.interaction_network, split)
+
 				if self.master:
 					print(f'[COORDINATOR] Finished computing the local model', flush=True)
-					self.client_models.append(self.local_model)
+					self.client_models.append(self.local_models)
 				else:
 					print(f'[CLIENT] Sending local model to master', flush=True)
-					self.data_outgoing = json.dumps(self.local_model)
+					self.data_outgoing = json.dumps(self.local_models)
 					self.data_incoming = []
 					self.status_available = True
 
@@ -167,11 +181,13 @@ class AppLogic:
 					if len(self.data_incoming) == len(self.clients) - 1:
 						print(f'[COORDINATOR] Received local models from all clients', flush=True)
 						self.client_models.extend(self.data_incoming)
+						self.data_incoming = []
 						state = state_global_aggregation
 				else:
 					self.progress = 'gathering global model...'
 					if len(self.data_incoming) > 0:
-						self.global_model = self.data_incoming[0]
+						self.global_models = self.data_incoming[0]
+						self.data_incoming = []
 						print(f'[CLIENT] Received result from master', flush=True)
 						state = state_write_results
 
@@ -179,17 +195,19 @@ class AppLogic:
 
 			if state == state_global_aggregation:
 				self.progress = 'computing...'
-				self.global_model = global_aggregation(self.data_incoming)
+				for split in self.split_expression_data.keys():
+					self.global_models[split] = global_aggregation([client_splits[split] for client_splits in self.client_models])
 				print(f'[COORDINATOR] Sending global model to clients', flush=True)
-				self.data_outgoing = json.dumps(self.global_model)
+				self.data_outgoing = json.dumps(self.global_models)
 				self.status_available = True
 				state = state_write_results
 
 			if state == state_write_results:
 				self.progress = 'writing results...'
 				if config.get_option('prediction'):
-					local_prediction(self.global_model, self.expression_data)
-				write_results(self.local_model, self.global_model)
+					for split in self.split_expression_data.keys():
+						local_prediction(self.global_models[split], self.split_expression_data[split], split.replace("/input/", "/output/"))
+						write_results(self.local_models[split], self.global_models[split], split.replace("/input/", "/output/"))
 				state = state_finish
 
 			if state == state_finish:

@@ -1,7 +1,8 @@
 import base64
-import errno
 import os
 import sys
+import shutil
+from uuid import uuid4
 
 import yaml
 
@@ -18,6 +19,8 @@ def read_input(input_filepath, input_filename, input_separator):
 	Read in the input data from the input directory
 	:return: Data or None if File could not be read
 	"""
+	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
+	os.makedirs(temp_path)
 
 	try:
 		print('[IO] Parsing data of ' + input_filepath)
@@ -25,7 +28,7 @@ def read_input(input_filepath, input_filename, input_separator):
 		command = ["/app/app/R/grandforest.read_data_frame.R",
 				   input_filepath,
 				   str(input_separator),
-				   TEMP_DIR + "/" + input_filename + ".RData"]
+				   temp_path + "/" + input_filename + ".RData"]
 
 		input_reader_subprocess = RSubprocess(command)
 		print('[IO] Starting RSubprocess to read ' + input_filename + '...')
@@ -34,7 +37,7 @@ def read_input(input_filepath, input_filename, input_separator):
 		input_reader_subprocess.join()
 		print('[IO] Finished RSubprocess to read ' + input_filename)
 
-		data = base64.b64encode(open(TEMP_DIR + "/" + input_filename + ".RData", 'rb').read()).decode('utf-8')
+		data = base64.b64encode(open(temp_path + "/" + input_filename + ".RData", 'rb').read()).decode('utf-8')
 		print('[IO] Converted RSubprocess Result to a python binary object')
 
 		print('[IO] Read R Dataframe with size ' + str(sys.getsizeof(data)) + 'Bytes')
@@ -46,17 +49,17 @@ def read_input(input_filepath, input_filename, input_separator):
 		return None
 
 
-def write_output(data, output_directory_name):
+def write_output(data, split, output_directory_name):
 	# create output directory
-	os.mkdir(OUTPUT_DIR + '/' + output_directory_name)
+	os.makedirs(split + '/' + output_directory_name)
 
 	write_binary_file(base64.decodebytes(data.encode('utf-8')),
-					  OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData')
+					  split + '/' + output_directory_name + '/' + 'model' + '.RData')
 
 	command = ["/app/app/R/grandforest.analyze_results.R",
-			   OUTPUT_DIR + '/' + output_directory_name + '/' + output_directory_name + '.RData',
+			   split + '/' + output_directory_name + '/' + 'model' + '.RData',
 			   TEMP_DIR + '/' + 'interaction_network.RData',
-			   OUTPUT_DIR + '/' + output_directory_name + '/']
+			   split + '/' + output_directory_name + '/']
 
 	print('[IO] Starting RSubprocess to analyze the ' + output_directory_name + '...')
 	analyzing_results_subprocess = RSubprocess(command)
@@ -162,7 +165,22 @@ def read_config(is_coordinator):
 
 		config.add_option('expression_data_separator', config_file['local_files']['expression_data_separator'])
 		config.add_option('expression_data_filename', config_file['local_files']['expression_data'])
-		config.add_option('expression_data_filepath', INPUT_DIR + '/' + config_file['local_files']['expression_data'])
+
 		# split
 		config.add_option('split_mode', config_file['split']['mode'])
 		config.add_option('split_dir', config_file['split']['dir'])
+
+		splits = {}
+
+		if config.get_option('split_mode') == 'directory':
+			splits = dict.fromkeys(
+				[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
+		else:
+			splits[INPUT_DIR + '/'] = None
+
+		for split in splits.keys():
+			os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+
+		shutil.copyfile(INPUT_DIR + '/config.yml', OUTPUT_DIR + '/config.yml')
+
+		return splits
