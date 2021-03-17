@@ -27,8 +27,10 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
 				   str(config.get_option('seed')),
-				   str(config.get_option('expression_data_dependent_variable_name')),
 				   str(config.get_option('grandforest_treetype')),
+				   str(config.get_option('expression_data_dependent_variable_name')),
+				   str(config.get_option('expression_data_survival_event')),
+				   str(config.get_option('expression_data_survival_time')),
 				   temp_path + '/' + 'local_model.RData']
 	else:
 		command = ["/app/app/R/grandforest.train_model.unsupervised.R",
@@ -36,6 +38,9 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
 				   str(config.get_option('seed')),
+				   str(config.get_option('grandforest_treetype')),
+				   str(config.get_option('expression_data_survival_event')),
+				   str(config.get_option('expression_data_survival_time')),
 				   temp_path + '/' + 'local_model.RData']
 
 	local_computation_subprocess = RSubprocess(command)

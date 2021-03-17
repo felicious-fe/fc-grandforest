@@ -75,8 +75,10 @@ write_delim(feature_importances_df, paste(output_dir, "/feature_importances.tsv"
 print('[R] Generating plots')
 top25 <- feature_importances_df %>% head(25) %>% mutate_if(is.factor, as.character)
 plot1 <- plot_top25_importances(top25)
-ggsave(filename='feature_importances.svg', device=svg(), path=output_dir)
+ggsave(plot=plot1, filename='feature_importances.svg', device=svg(), path=output_dir)
+ggsave(plot=plot1, filename='feature_importances.png', device=png(), path=output_dir)
 plot2 <- plot_top25_subnetwork(top25, interaction_network)
-ggsave(filename='interaction_subnetwork.svg', device=svg(), path=output_dir)
+ggsave(plot=plot2, filename='interaction_subnetwork.svg', device=svg(), path=output_dir)
+ggsave(plot=plot2, filename='interaction_subnetwork.png', device=png(), path=output_dir)
 
 print('[R] Done')

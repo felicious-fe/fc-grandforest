@@ -154,12 +154,15 @@ class AppLogic:
 						except KeyError:
 							print('[LOGIC] Config File Error.')
 							raise ValueError("The GrandForest Layout is invalid: survival time and/or event missing")
+						config.add_option('expression_data_dependent_variable_name', "None")
 					else:
 						try:
 							config.get_option('expression_data_dependent_variable_name')
 						except KeyError:
 							print('[LOGIC] Config File Error.')
 							raise ValueError("The GrandForest Layout is invalid: dependent variable name missing")
+						config.add_option('expression_data_survival_event', "None")
+						config.add_option('expression_data_survival_time', "None")
 
 				for split in self.split_expression_data.keys():
 					self.local_models[split] = local_computation(self.split_expression_data[split], self.interaction_network, split)

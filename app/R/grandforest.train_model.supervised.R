@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # Execute with args:
-# grandforest.train_model.supervised.R expression_data_filepath interaction_network_filepath number_of_trees seed dependent.variable.name dependent.variable.type result_forest.RData
+# grandforest.train_model.supervised.R expression_data_filepath interaction_network_filepath number_of_trees seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
 
 suppressPackageStartupMessages({
   require(dplyr)
@@ -14,9 +14,11 @@ expression_data_file <- args[1]
 interaction_network_file <- args[2]
 num.trees <- as.numeric(args[3])
 seed <- args[4]
-dependent.variable.name <- args[5]
-dependent.variable.type <- args[6]
-output_file <- args[7]
+treetype <- args[5]
+dependent.variable.name <- args[6]
+survival.event.name <- args[7]
+survival.time.name <- args[8]
+output_file <- args[9]
 
 if(seed == "None") {
   seed <- NULL
@@ -34,8 +36,14 @@ load(expression_data_file)
 expression_data <- data
 data <- NULL
 
+if(treetype %in% c("classification", "regression", "probability")) {
+  required.columns <- c(dependent.variable.name)
+} else {
+  required.columns <- c(survival.event.name, survival.time.name)
+}
+
 # Remove all Variables from expression_data that are not in the interaction network
-variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], dependent.variable.name)))
+variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], required.columns)))
 expression_data <- select(expression_data, all_of(variable.names))
 
 if(nrow(expression_data) < 2) {
@@ -46,20 +54,28 @@ if(nrow(expression_data) < 2) {
 }
 
 # Convert dependent variable column to factor if a classification forest is used
-if(dependent.variable.type == "classification") {
+if(treetype == "classification") {
   expression_data[[dependent.variable.name]] <- as.factor(expression_data[[dependent.variable.name]])
+} else if(treetype == "regression") {
+  expression_data[[dependent.variable.name]] <- as.numeric(expression_data[[dependent.variable.name]])
 }
 
-print(dependent.variable.type)
-str(interaction_network)
-str(expression_data)
-
 print('[R] Executing GrandForest supervised')
-model <- grandforest(data=expression_data,
-                     graph_data=interaction_network,
-                     dependent.variable.name=dependent.variable.name,
-                     num.trees=num.trees,
-                     seed=seed)
+if(treetype %in% c("classification", "regression", "probability")) {
+  model <- grandforest(data=expression_data,
+                       graph_data=interaction_network,
+                       dependent.variable.name=dependent.variable.name,
+                       num.trees=num.trees,
+                       seed=seed)
+} else {
+  model <- grandforest(data=expression_data,
+                       graph_data=interaction_network,
+                       dependent.variable.name=survival.time.name,
+                       status.variable.name=survival.event.name,
+                       num.trees=num.trees,
+                       seed=seed)
+}
+
 
 print('[R] Saving model to RData file')
 save(model, file=output_file)
