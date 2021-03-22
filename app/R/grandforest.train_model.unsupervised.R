@@ -33,8 +33,12 @@ data <- NULL
 
 
 # Remove all Variables from expression_data that are not in the interaction network
+<<<<<<< Updated upstream
 variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]])))
-expression_data <- select(expression_data, all_of(as.character(variable.names)))
+=======
+variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], required.columns)))
+>>>>>>> Stashed changes
+expression_data <- dplyr::select(expression_data, all_of(variable.names))
 
 if(nrow(expression_data) < 2) {
   print('[R] Error: The expression data frame is too small.')

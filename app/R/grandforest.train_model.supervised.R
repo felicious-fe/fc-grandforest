@@ -36,6 +36,8 @@ load(expression_data_file)
 expression_data <- data
 data <- NULL
 
+print('[R] Preparing data')
+
 if(treetype %in% c("classification", "regression", "probability")) {
   required.columns <- c(dependent.variable.name)
 } else {
@@ -44,7 +46,7 @@ if(treetype %in% c("classification", "regression", "probability")) {
 
 # Remove all Variables from expression_data that are not in the interaction network
 variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], required.columns)))
-expression_data <- select(expression_data, all_of(variable.names))
+expression_data <- dplyr::select(expression_data, all_of(variable.names))
 
 if(nrow(expression_data) < 2) {
   print('[R] Error: The expression data frame is too small.')
@@ -55,9 +57,12 @@ if(nrow(expression_data) < 2) {
 
 # Convert dependent variable column to factor if a classification forest is used
 if(treetype == "classification") {
-  expression_data[[dependent.variable.name]] <- as.factor(expression_data[[dependent.variable.name]])
+  expression_data[[dependent.variable.name]] <- as.factor(dplyr::pull(expression_data, dependent.variable.name))
 } else if(treetype == "regression") {
-  expression_data[[dependent.variable.name]] <- as.numeric(expression_data[[dependent.variable.name]])
+  expression_data[[dependent.variable.name]] <- as.numeric(dplyr::pull(expression_data, dependent.variable.name))
+} else if(treetype == "survival") {
+  expression_data[[survival.event.name]] <- as.numeric(dplyr::pull(expression_data, survival.event.name))
+  expression_data[[survival.time.name]] <- as.numeric(dplyr::pull(expression_data, survival.time.name))
 }
 
 print('[R] Executing GrandForest supervised')
