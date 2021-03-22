@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # Execute with args:
-# grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees seed treetype survival.event.name survival.time.name result_forest.RData
+# grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees seed result_forest.RData
 
 suppressPackageStartupMessages({
   require(dplyr)
@@ -14,9 +14,6 @@ interaction_network_file <- args[2]
 expression_data_file <- args[1]
 num.trees <- as.numeric(args[3])
 seed <- args[4]
-treetype <- args[5]
-survival.event.name <- args[7]
-survival.time.name <- args[8]
 output_file <- args[5]
 
 if(seed == "None") {
@@ -34,15 +31,9 @@ load(expression_data_file)
 expression_data <- data
 data <- NULL
 
-if(treetype == "survival") {
-  required.columns <- c(survival.event.name, survival.time.name)
-} else {
-  required.columns <- c()
-}
-
 
 # Remove all Variables from expression_data that are not in the interaction network
-variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], required.columns)))
+variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]])))
 expression_data <- select(expression_data, all_of(as.character(variable.names)))
 
 if(nrow(expression_data) < 2) {
@@ -56,19 +47,11 @@ str(interaction_network)
 str(expression_data)
 
 print('[R] Executing GrandForest unsupervised')
-if(treetype == "survival") {
-  model <- grandforest_unsupervised(data=expression_data,
-                                    graph_data=interaction_network,
-                                    num.trees=num.trees,
-                                    dependent.variable.name=survival.time.name,
-                                    status.variable.name=survival.event.name,
-                                    seed=seed)
-} else {
-  model <- grandforest_unsupervised(data=expression_data,
-                                    graph_data=interaction_network,
-                                    num.trees=num.trees,
-                                    seed=seed)
-}
+
+model <- grandforest_unsupervised(data=expression_data,
+                                  graph_data=interaction_network,
+                                  num.trees=num.trees,
+                                  seed=seed)
 
 print('[R] Saving model to RData file')
 save(model, file=output_file)
