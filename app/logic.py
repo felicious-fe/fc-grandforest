@@ -5,6 +5,7 @@ import sys
 import shutil
 import threading
 import time
+import random
 
 from app import config
 from app.algo import local_computation, global_aggregation, local_prediction, write_results
@@ -63,7 +64,7 @@ class AppLogic:
 	def app_flow(self):
 		# This method contains a state machine for the client and coordinator instance
 		# Coordinator Workflow: 1 -> 2 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
-		# Client Workflow:      1 -> 3 -> 4 -> 5 -> 7 -> 8 -> 9
+		# Client Workflow:      1 -> 3 -> 4 -> 5 -> 7 -> 8
 
 		# === States ===
 		state_initialize = 1
@@ -211,18 +212,27 @@ class AppLogic:
 					for split in self.split_expression_data.keys():
 						local_prediction(self.global_models[split], self.split_expression_data[split], split.replace("/input/", "/output/"))
 						write_results(self.local_models[split], self.global_models[split], split.replace("/input/", "/output/"))
+
+				if self.master:
+					self.data_incoming = ['DONE']
+				else:
+					self.data_outgoing = json.dumps('DONE')
+					self.status_available = True
 				state = state_finish
 
 			if state == state_finish:
 				self.progress = 'finishing...'
-
-				# delete temp directory with contents
-				shutil.rmtree(config.get_option('TEMP_DIR'))
-
-				time.sleep(10)
-				print(f'[CLIENT/COORDINATOR] Finished the workflow, exiting...', flush=True)
-				self.status_finished = True
-				break
+				if self.master:
+					if len(self.data_incoming) == len(self.clients):
+						print(f'[COORDINATOR] Finished the workflow, exiting...', flush=True)
+						self.status_finished = True
+						# FINISH COORDINATOR
+						break
+				else:
+					# FINISH CIENT
+					print(f'[CLIENT] Finished the workflow, exiting...', flush=True)
+					self.status_finished = True
+					break
 
 			time.sleep(0.1)
 
