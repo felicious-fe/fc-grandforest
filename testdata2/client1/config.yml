@@ -3,6 +3,7 @@ fc_grandforest:
     grandforest_method: supervised  # supervised or unsupervised
     grandforest_treetype: classification  # classification, regression, survival or probability
     number_of_trees: 10000
+    minimal_node_size: 3 # Helps with privacy preservation. Lower values could potentially reveal private data, values below 3 are not allowed. Values greater than 10 are considered good, but model performance suffers on small data sets.
     seed: 2021
     interaction_network: biogrid  # biogrid, htridb, iid, regnetwork or filepath
     interaction_network_separator: "\t"  # only used with filepath

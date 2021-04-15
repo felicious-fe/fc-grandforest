@@ -116,6 +116,7 @@ class AppLogic:
 					self.data_outgoing = json.dumps([config.get_option('grandforest_method'),
 													 config.get_option('grandforest_treetype'),
 													 config.get_option('number_of_trees'),
+													 config.get_option('minimal_node_size'),
 													 config.get_option('seed'),
 													 self.interaction_network])
 					self.status_available = True
@@ -131,8 +132,9 @@ class AppLogic:
 					config.add_option('grandforest_method', self.data_incoming[0][0])
 					config.add_option('grandforest_treetype', self.data_incoming[0][1])
 					config.add_option('number_of_trees', self.data_incoming[0][2])
-					config.add_option('seed', self.data_incoming[0][3])
-					self.interaction_network = self.data_incoming[0][4]
+					config.add_option('minimal_node_size', self.data_incoming[0][3])
+					config.add_option('seed', self.data_incoming[0][4])
+					self.interaction_network = self.data_incoming[0][5]
 					print(f'[CLIENT] Received config and interaction network with size {sys.getsizeof(self.interaction_network)} Bytes from coordinator', flush=True)
 					state = state_read_input
 

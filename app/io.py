@@ -103,6 +103,7 @@ def read_config(is_coordinator):
 			config.add_option('grandforest_method', config_file['global_options']['grandforest_method'])
 			config.add_option('grandforest_treetype', config_file['global_options']['grandforest_treetype'])
 			config.add_option('number_of_trees', config_file['global_options']['number_of_trees'])
+			config.add_option('minimal_node_size', config_file['global_options']['minimal_node_size'])
 			config.add_option('seed', config_file['global_options']['seed'])
 			if config_file['global_options']['interaction_network'] == 'biogrid':
 				config.add_option('interaction_network_filename', 'biogrid')

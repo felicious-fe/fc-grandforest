@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # Execute with args:
-# grandforest.train_model.supervised.R expression_data_filepath interaction_network_filepath number_of_trees seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
+# grandforest.train_model.supervised.R expression_data_filepath interaction_network_filepath number_of_trees minimal_node_size seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
 
 suppressPackageStartupMessages({
   require(dplyr)
@@ -13,12 +13,13 @@ args <- commandArgs(trailingOnly=TRUE)
 expression_data_file <- args[1]
 interaction_network_file <- args[2]
 num.trees <- as.numeric(args[3])
-seed <- args[4]
-treetype <- args[5]
-dependent.variable.name <- args[6]
-survival.event.name <- args[7]
-survival.time.name <- args[8]
-output_file <- args[9]
+min.node.size <- as.numeric(args[4])
+seed <- args[5]
+treetype <- args[6]
+dependent.variable.name <- args[7]
+survival.event.name <- args[8]
+survival.time.name <- args[9]
+output_file <- args[10]
 
 if(seed == "None") {
   seed <- NULL
@@ -71,6 +72,7 @@ if(treetype %in% c("classification", "regression", "probability")) {
                        graph_data=interaction_network,
                        dependent.variable.name=dependent.variable.name,
                        num.trees=num.trees,
+                       min.node.size=min.node.size,
                        seed=seed)
 } else {
   model <- grandforest(data=expression_data,
@@ -78,6 +80,7 @@ if(treetype %in% c("classification", "regression", "probability")) {
                        dependent.variable.name=survival.time.name,
                        status.variable.name=survival.event.name,
                        num.trees=num.trees,
+                       min.node.size=min.node.size,
                        seed=seed)
 }
 

@@ -26,6 +26,7 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 				   temp_path + '/' + 'expression_data.RData',
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
+				   str(config.get_option('minimal_node_size')),
 				   str(config.get_option('seed')),
 				   str(config.get_option('grandforest_treetype')),
 				   str(config.get_option('expression_data_dependent_variable_name')),
@@ -37,6 +38,7 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 				   temp_path + '/' + 'expression_data.RData',
 				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees')),
+				   str(config.get_option('minimal_node_size')),
 				   str(config.get_option('seed')),
 				   temp_path + '/' + 'local_model.RData']
 

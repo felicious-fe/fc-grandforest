@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # Execute with args:
-# grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees seed result_forest.RData
+# grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees minimal_node_size seed result_forest.RData
 
 suppressPackageStartupMessages({
   require(dplyr)
@@ -13,8 +13,9 @@ args <- commandArgs(trailingOnly=TRUE)
 interaction_network_file <- args[2]
 expression_data_file <- args[1]
 num.trees <- as.numeric(args[3])
-seed <- args[4]
-output_file <- args[5]
+min.node.size <- as.numeric(args[4])
+seed <- args[5]
+output_file <- args[6]
 
 if(seed == "None") {
   seed <- NULL
@@ -55,6 +56,7 @@ print('[R] Executing GrandForest unsupervised')
 model <- grandforest_unsupervised(data=expression_data,
                                   graph_data=interaction_network,
                                   num.trees=num.trees,
+                                  min.node.size=min.node.size,
                                   seed=seed)
 
 print('[R] Saving model to RData file')

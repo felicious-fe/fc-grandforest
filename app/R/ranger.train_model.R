@@ -1,7 +1,7 @@
 #!/usr/bin/Rscript
 
 # Execute with args:
-# ranger.train_model.R expression_data_filepath number_of_trees seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
+# ranger.train_model.R expression_data_filepath number_of_trees minimal_node_size seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
 
 suppressPackageStartupMessages({
   require(dplyr)
@@ -12,12 +12,13 @@ args <- commandArgs(trailingOnly=TRUE)
 
 expression_data_file <- args[1]
 num.trees <- as.numeric(args[2])
-seed <- args[3]
-treetype <- args[4]
-dependent.variable.name <- args[5]
-survival.event.name <- args[6]
-survival.time.name <- args[7]
-output_file <- args[8]
+min.node.size <- as.numeric(args[3])
+seed <- args[4]
+treetype <- args[5]
+dependent.variable.name <- args[6]
+survival.event.name <- args[7]
+survival.time.name <- args[8]
+output_file <- args[9]
 
 if(seed == "None") {
   seed <- NULL
@@ -55,12 +56,14 @@ if(treetype %in% c("classification", "regression", "probability")) {
   model <- ranger(data=expression_data,
                   dependent.variable.name=dependent.variable.name,
                   num.trees=num.trees,
+                  min.node.size=min.node.size,
                   seed=seed)
 } else {
   model <- ranger(data=expression_data,
                   dependent.variable.name=survival.time.name,
                   status.variable.name=survival.event.name,
                   num.trees=num.trees,
+                  min.node.size=min.node.size,
                   seed=seed)
 }
 
