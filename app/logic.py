@@ -103,9 +103,11 @@ class AppLogic:
 							raise
 
 				if self.master:
+					print(f'Coordinator {self.id}: {get_input_filesizes(self.split_expression_data)}', flush=True)
 					self.data_incoming = [[self.id, get_input_filesizes(self.split_expression_data)]]
 					state = state_read_config
 				else:
+					print(f'Client {self.id}: {get_input_filesizes(self.split_expression_data)}', flush=True)
 					self.data_outgoing = json.dumps([self.id, get_input_filesizes(self.split_expression_data)])
 					self.status_available = True
 					state = state_wait_for_config
@@ -114,9 +116,14 @@ class AppLogic:
 
 				if self.master:
 					if len(self.data_incoming) == len(self.clients):
+						print(f'Coordinator {self.id}: {self.data_incoming}', flush=True)
 						filesizes_combined = dict()
 						for participant in self.data_incoming:
 							for split in self.split_expression_data.keys():
+								try:
+									filesizes_combined[split]
+								except KeyError:
+									filesizes_combined[split] = 0
 								filesizes_combined[split] = filesizes_combined[split] + participant[1][split]
 
 						num_trees_per_client_per_split = dict()
@@ -138,6 +145,7 @@ class AppLogic:
 															  config.get_option('interaction_network_filename'),
 															  config.get_option('interaction_network_separator'))
 						config.add_option('number_of_trees_per_split', num_trees_per_client_per_split[self.id])
+						self.data_incoming = []
 
 						print(f'[COORDINATOR] Sending interaction network to clients', flush=True)
 						self.data_outgoing = json.dumps([config.get_option('grandforest_method'),
@@ -163,6 +171,7 @@ class AppLogic:
 					config.add_option('seed', self.data_incoming[0][4])
 					self.interaction_network = self.data_incoming[0][5]
 					print(f'[CLIENT] Received config and interaction network with size {sys.getsizeof(self.interaction_network)} Bytes from coordinator', flush=True)
+					self.data_incoming = []
 					state = state_read_input
 
 			if state == state_read_input:
