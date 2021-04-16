@@ -14,6 +14,13 @@ TEMP_DIR = "/app/temp"
 OUTPUT_DIR = "/mnt/output"
 
 
+def get_input_filesizes(splits):
+	filesizes = dict()
+	for split in splits.keys():
+		filesizes[split] = os.path.getsize(split + '/' + config.get_option('expression_data_filename'))
+	return filesizes
+
+
 def read_input(input_filepath, input_filename, input_separator):
 	"""
 	Read in the input data from the input directory

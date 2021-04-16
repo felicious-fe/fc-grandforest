@@ -6,10 +6,11 @@ import shutil
 import threading
 import time
 import random
+import math
 
 from app import config
 from app.algo import local_computation, global_aggregation, local_prediction, write_results
-from app.io import read_config, read_input
+from app.io import get_input_filesizes, read_config, read_input
 
 
 class AppLogic:
@@ -102,25 +103,51 @@ class AppLogic:
 							raise
 
 				if self.master:
+					self.data_incoming = [[self.id, get_input_filesizes(self.split_expression_data)]]
 					state = state_read_config
 				else:
+					self.data_outgoing = json.dumps([self.id, get_input_filesizes(self.split_expression_data)])
+					self.status_available = True
 					state = state_wait_for_config
 
 			if state == state_read_config:
 
 				if self.master:
-					self.interaction_network = read_input(config.get_option('interaction_network_filepath'),
-														  config.get_option('interaction_network_filename'),
-														  config.get_option('interaction_network_separator'))
-					print(f'[COORDINATOR] Sending interaction network to clients', flush=True)
-					self.data_outgoing = json.dumps([config.get_option('grandforest_method'),
-													 config.get_option('grandforest_treetype'),
-													 config.get_option('number_of_trees'),
-													 config.get_option('minimal_node_size'),
-													 config.get_option('seed'),
-													 self.interaction_network])
-					self.status_available = True
-					state = state_read_input
+					if len(self.data_incoming) == len(self.clients):
+						filesizes_combined = dict()
+						for participant in self.data_incoming:
+							for split in self.split_expression_data.keys():
+								filesizes_combined[split] = filesizes_combined[split] + participant[1][split]
+
+						num_trees_per_client_per_split = dict()
+						for participant in self.data_incoming:
+							for split in self.split_expression_data.keys():
+								try:
+									num_trees_per_client_per_split[participant[0]]
+								except KeyError:
+									num_trees_per_client_per_split[participant[0]] = dict()
+
+								try:
+									num_trees_per_client_per_split[participant[0]][split]
+								except KeyError:
+									num_trees_per_client_per_split[participant[0]][split] = 0
+								num_trees_per_client_per_split[participant[0]][split] = math.ceil(
+									participant[1][split] / filesizes_combined[split] * int(config.get_option('number_of_trees')))
+
+						self.interaction_network = read_input(config.get_option('interaction_network_filepath'),
+															  config.get_option('interaction_network_filename'),
+															  config.get_option('interaction_network_separator'))
+						config.add_option('number_of_trees_per_split', num_trees_per_client_per_split[self.id])
+
+						print(f'[COORDINATOR] Sending interaction network to clients', flush=True)
+						self.data_outgoing = json.dumps([config.get_option('grandforest_method'),
+														 config.get_option('grandforest_treetype'),
+														 num_trees_per_client_per_split,
+														 config.get_option('minimal_node_size'),
+														 config.get_option('seed'),
+														 self.interaction_network])
+						self.status_available = True
+						state = state_read_input
 				else:
 					state = state_wait_for_config
 
@@ -131,7 +158,7 @@ class AppLogic:
 				if len(self.data_incoming) > 0:
 					config.add_option('grandforest_method', self.data_incoming[0][0])
 					config.add_option('grandforest_treetype', self.data_incoming[0][1])
-					config.add_option('number_of_trees', self.data_incoming[0][2])
+					config.add_option('number_of_trees_per_split', self.data_incoming[0][2][self.id])
 					config.add_option('minimal_node_size', self.data_incoming[0][3])
 					config.add_option('seed', self.data_incoming[0][4])
 					self.interaction_network = self.data_incoming[0][5]

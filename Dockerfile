@@ -7,10 +7,12 @@ RUN pip3 install gunicorn
 
 # Install required R packages
 # It's better/faster/more stable to install packages as binary package via apt-get than to compile them in R, but they are versioned very conservatively
-RUN apt-get update && apt-get install -y r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager
-RUN R -e "install.packages(\"dplyr\")"
+RUN apt-get update && apt-get install -y libtool r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager r-cran-survival r-cran-nloptr
+RUN R -e "install.packages(c(\"dplyr\",\"geomnet\",\"survminer\"))"
 RUN R -e "BiocManager::install(\"org.Hs.eg.db\", update = FALSE, ask = FALSE)"
+RUN R -e "BiocManager::install(\"ComplexHeatmap\", update = FALSE, ask = FALSE)"
 RUN R -e "install.packages(\"geomnet\")"
+RUN R -e "install.packages(\"survminer\")"
 
 COPY server_config/supervisord.conf /supervisord.conf
 COPY server_config/nginx /etc/nginx/sites-available/default
@@ -19,8 +21,6 @@ COPY server_config/docker-entrypoint.sh /entrypoint.sh
 COPY . /app
 
 # INSTALL GRANDFOREST
-# Old Version:
-#RUN R -e "devtools::install_github(\"simonlarsen/grandforest\")"
 # Before executing this Dockerfile, clone the grandforest-federizable repository next to this file.
 RUN R -e "devtools::install(\"/app/grandforest-federalizable\")"
 
