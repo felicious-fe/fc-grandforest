@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Federated GrandForest</title>
+        <base href="/">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://fonts.googleapis.com/css?family=Open+Sans" rel="stylesheet">
+        <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+        <link rel="icon" href="assets/fc_logo.ico">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.1/css/bulma.min.css">
+        <script src="https://kit.fontawesome.com/0206581977.js" crossorigin="anonymous"></script>
+
+        <script>
+            function toggle_grandforest_method(val){
+                var dep_var=document.getElementById('expression_data_dependent_variable_name_div');
+                var surv_var1=document.getElementById('expression_data_survival_event_div');
+                var surv_var2=document.getElementById('expression_data_survival_time_div');
+                if(val==='s-survival') {
+                    dep_var.style.display='none';
+                    surv_var1.style.display='block';
+                    surv_var2.style.display='block';
+                } else if(val==='u-classification') {
+                    dep_var.style.display='block';
+                    surv_var1.style.display='block';
+                    surv_var2.style.display='block';
+                } else {
+                    dep_var.style.display='block';
+                    surv_var1.style.display='none';
+                    surv_var2.style.display='none';
+                }
+            }
+        </script>
+
+        <script>
+            function toggle_interaction_network(val){
+                var filename=document.getElementById('interaction_network_filename_div');
+                var seperator=document.getElementById('interaction_network_separator_div');
+                if(val==='file') {
+                    filename.style.display='block';
+                    seperator.style.display='block';
+                } else {
+                    filename.style.display='none';
+                    seperator.style.display='none';
+                }
+            }
+        </script>
+
+        <script>
+            function reset_all_toggles(){
+                document.getElementById('expression_data_dependent_variable_name_div').style.display='block';
+                document.getElementById('expression_data_survival_event_div').style.display='none';
+                document.getElementById('expression_data_survival_time_div').style.display='none';
+                document.getElementById('interaction_network_filename_div').style.display='none';
+                document.getElementById('interaction_network_separator_div').style.display='none';
+            }
+        </script>
+
+    </head>
+
+    <body onload="reset_all_toggles();">
+        <div class="main-wrapper">
+            <main>
+                <section class="hero is-link is-small">
+                    <div class="hero-body">
+                        <div class="container is-fluid">
+                            <section class="section" style="padding: 1rem 1rem;">
+                                <h1 class="title">
+                                    Federated GrandForest
+                                </h1>
+                            </section>
+                        </div>
+                    </div>
+                </section>
+
+                <form method="post">
+                    <div class="container is-fluid">
+                        <div class="card" style="margin-bottom: 15px;">
+                            <header class="card-header">
+                                <h2 class="card-header-title">Global Options</h2>
+                            </header>
+                            <div class="card-content">
+                                <div class="form-group field">
+                                    <label class="label" for="grandforest_method">GrandForest Method</label>
+                                    <select class="select" name="grandforest_method" id="grandforest_method" onchange='toggle_grandforest_method(this.value);'>
+                                        <optgroup label="Supervised">
+                                            <option value="s-classification" selected>Classification</option>
+                                            <option value="s-regression">Regression</option>
+                                            <option value="s-survival">Survival</option>
+                                            <option value="s-probability">Probability</option>
+                                        </optgroup>
+                                        <optgroup label="Unsupervised">
+                                            <option value="u-classification">Classification</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="label" for="number_of_trees">Number of Trees</label>
+                                    <input class="input" type="text" id="number_of_trees" name="number_of_trees">
+                                </div>
+                                <div class="form-group field">
+                                    <label class="label" for="minimal_node_size">Minimal Node Size</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="minimal_node_size" name="minimal_node_size" value="10">
+                                    </div>
+                                </div>
+                                <div class="form-group field">
+                                    <label class="label" for="seed">Seed</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="seed" name="seed" value="None">
+                                    </div>
+                                </div>
+                                <div class="form-group field">
+                                    <label class="label" for="interaction_network">Interaction Network</label>
+                                    <select class="select" name="interaction_network" id="interaction_network" onchange='toggle_interaction_network(this.value);'>
+                                        <option value="biogrid" selected>BioGRID</option>
+                                        <option value="iid">IID</option>
+                                        <option value="htridb">HTRiDB</option>
+                                        <option value="regnetwork">RegNetwork</option>
+                                        <option value="file">Custom File</option>
+                                    </select>
+                                </div>
+                                <div class="form-group field" id="interaction_network_filename_div">
+                                    <label class="label" for="interaction_network_filename">Interaction Network File Name</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="interaction_network_file_name" name="interaction_network_file_name">
+                                    </div>
+                                </div>
+                                <div class="form-group field" id="interaction_network_separator_div">
+                                    <label class="label" for="interaction_network_separator">Interaction Network Separator</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="interaction_network_separator" name="interaction_network_separator">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container is-fluid">
+                        <div class="card" style="margin-bottom: 15px;">
+                            <header class="card-header">
+                                <h2 class="card-header-title">Local Options</h2>
+                            </header>
+                            <div class="card-content">
+                                <div class="form-group field">
+                                    <label class="label" for="prediction">prediction</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="prediction" name="prediction" value="True">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container is-fluid">
+                        <div class="card" style="margin-bottom: 15px;">
+                            <header class="card-header">
+                                <h2 class="card-header-title">Local Files</h2>
+                            </header>
+                            <div class="card-content">
+                                <div class="form-group field">
+                                    <label class="label" for="expression_data_file">Expression Data Filename</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="expression_data_file" name="expression_data_file" value="expression_data.tsv">
+                                    </div>
+                                </div>
+                                <div class="form-group field" id="expression_data_dependent_variable_name_div">
+                                    <label class="label" for="expression_data_dependent_variable_name">Expression Data Dependent Variable Name</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="expression_data_dependent_variable_name" name="expression_data_dependent_variable_name" value="class_name">
+                                    </div>
+                                </div>
+                                <div class="form-group field" id="expression_data_survival_event_div">
+                                    <label class="label" for="expression_data_survival_event">Expression Data Survival Event</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="expression_data_survival_event" name="expression_data_survival_event" value="survival_event">
+                                    </div>
+                                </div>
+                                <div class="form-group field" id="expression_data_survival_time_div">
+                                    <label class="label" for="expression_data_survival_time">Expression Data Survival Time</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="expression_data_survival_time" name="expression_data_survival_time" value="survival_time">
+                                    </div>
+                                </div>
+                                <div class="form-group field">
+                                    <label class="label" for="expression_data_separator">Expression Data Separator</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="expression_data_separator" name="expression_data_separator" value="\t">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container is-fluid">
+                        <div class="card" style="margin-bottom: 15px;">
+                            <header class="card-header">
+                                <h2 class="card-header-title">Split</h2>
+                            </header>
+                            <div class="card-content">
+                                <div class="form-group field">
+                                    <label class="label" for="split_mode">Split Mode</label>
+                                    <select class="select" name="split_mode" id="split_mode">
+                                        <option value="file" selected>File</option>
+                                        <option value="directory">Directory</option>
+                                    </select>
+                                </div>
+                                <div class="form-group field">
+                                    <label class="label" for="split_dir">Split Dir</label>
+                                    <div class="control">
+                                        <input class="input" type="text" id="split_dir" name="split_dir" value=".">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="container is-fluid">
+                        <div class="card" style="margin-bottom: 15px;">
+                            <div class="card-content">
+                                <div class="control">
+                                    <button class="button is-link" type="submit">
+                                        <span class="icon"><i class="fas fa-save"></i></span>
+                                        <span>Submit</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </main>
+        </div>
+    </body>
+</html>

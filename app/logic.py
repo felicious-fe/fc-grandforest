@@ -2,15 +2,13 @@ import errno
 import json
 import os
 import sys
-import shutil
 import threading
 import time
-import random
 import math
 
 from app import config
 from app.algo import local_computation, global_aggregation, local_prediction, write_results
-from app.io import get_input_filesizes, read_config, read_input
+from app.io import get_input_filesizes, check_if_config_file_exists, read_config, read_config_from_frontend, read_input
 
 
 class AppLogic:
@@ -37,6 +35,7 @@ class AppLogic:
 		self.thread = None
 		self.iteration = 0
 		self.progress = 'not started yet'
+		self.input_form = None
 		self.interaction_network = ''
 		self.split_expression_data = {}
 		self.local_models = {}
@@ -80,7 +79,7 @@ class AppLogic:
 
 		# Initial state
 		state = state_initialize
-		self.progress = 'initializing...'
+		self.progress = 'initializing'
 
 		while True:
 
@@ -89,12 +88,24 @@ class AppLogic:
 					config.init()  # initialize config dictionary
 					config.add_option('id', self.id)
 					config.add_option('is_coordinator', self.master)
-					self.split_expression_data = read_config(self.master)
+					
+					if check_if_config_file_exists():
+						self.progress = 'parsing config file'
+						self.split_expression_data = read_config(self.master)
+					else:
+						print('[IO] No config file found. Waiting for user input in the FrontEnd...')
+						config.add_option('input_form', False)
+						self.progress = 'getting config frontend'
+						while config.get_option('input_form') is False:
+							time.sleep(10)
+						self.progress = 'parsing config frontend'
+						print('[IO] Received FrontEnd Input Form. Continuing GrandForest workflow...')
+						self.split_expression_data = read_config_from_frontend(self.master, config.get_option('input_form'))
+
 					self.local_models = dict.fromkeys(self.split_expression_data.keys())
 
-					print(self.split_expression_data)
-
 					# create temp directory for python <-> R data exchange
+					# TODO create RAMDISK instead
 					try:
 						os.makedirs(config.get_option('TEMP_DIR'))
 					except OSError as e:
@@ -103,20 +114,20 @@ class AppLogic:
 							raise
 
 				if self.master:
-					print(f'Coordinator {self.id}: {get_input_filesizes(self.split_expression_data)}', flush=True)
-					self.data_incoming = [[self.id, get_input_filesizes(self.split_expression_data)]]
+					self.data_incoming.append([self.id, get_input_filesizes(self.split_expression_data)])
 					state = state_read_config
 				else:
-					print(f'Client {self.id}: {get_input_filesizes(self.split_expression_data)}', flush=True)
 					self.data_outgoing = json.dumps([self.id, get_input_filesizes(self.split_expression_data)])
 					self.status_available = True
 					state = state_wait_for_config
 
 			if state == state_read_config:
+				self.progress = 'sending config'
 
 				if self.master:
+					print(self.data_incoming, ";; ", str(self.clients))
 					if len(self.data_incoming) == len(self.clients):
-						print(f'Coordinator {self.id}: {self.data_incoming}', flush=True)
+						print(f'[CLIENT] Received all client expression data filesizes.', flush=True)
 						filesizes_combined = dict()
 						for participant in self.data_incoming:
 							for split in self.split_expression_data.keys():
@@ -162,7 +173,7 @@ class AppLogic:
 			# LOCAL PART
 
 			if state == state_wait_for_config:
-				self.progress = 'gathering config...'
+				self.progress = 'gathering config'
 				if len(self.data_incoming) > 0:
 					config.add_option('grandforest_method', self.data_incoming[0][0])
 					config.add_option('grandforest_treetype', self.data_incoming[0][1])
@@ -182,7 +193,7 @@ class AppLogic:
 				state = state_local_computation
 
 			if state == state_local_computation:
-				self.progress = 'computing...'
+				self.progress = 'computing'
 
 				# Check if config is valid
 				if config.get_option('grandforest_method') == "supervised":
@@ -219,14 +230,14 @@ class AppLogic:
 
 			if state == state_wait_for_global_aggregation:
 				if self.master:
-					self.progress = f'gathering... {len(self.data_incoming)}/{len(self.clients) - 1} models received'
+					self.progress = 'gathering models'
 					if len(self.data_incoming) == len(self.clients) - 1:
 						print(f'[COORDINATOR] Received local models from all clients', flush=True)
 						self.client_models.extend(self.data_incoming)
 						self.data_incoming = []
 						state = state_global_aggregation
 				else:
-					self.progress = 'gathering global model...'
+					self.progress = 'gathering global model'
 					if len(self.data_incoming) > 0:
 						self.global_models = self.data_incoming[0]
 						self.data_incoming = []
@@ -236,7 +247,7 @@ class AppLogic:
 			# GLOBAL PART
 
 			if state == state_global_aggregation:
-				self.progress = 'computing...'
+				self.progress = 'computing'
 				for split in self.split_expression_data.keys():
 					self.global_models[split] = global_aggregation([client_splits[split] for client_splits in self.client_models])
 				print(f'[COORDINATOR] Sending global model to clients', flush=True)
@@ -245,7 +256,7 @@ class AppLogic:
 				state = state_write_results
 
 			if state == state_write_results:
-				self.progress = 'writing results...'
+				self.progress = 'writing results'
 				if config.get_option('prediction'):
 					for split in self.split_expression_data.keys():
 						local_prediction(self.global_models[split], self.split_expression_data[split], split.replace("/input/", "/output/"))
@@ -259,7 +270,7 @@ class AppLogic:
 				state = state_finish
 
 			if state == state_finish:
-				self.progress = 'finishing...'
+				self.progress = 'finishing'
 				if self.master:
 					if len(self.data_incoming) == len(self.clients):
 						print(f'[COORDINATOR] Finished the workflow, exiting...', flush=True)

@@ -4,13 +4,15 @@ import sys
 import shutil
 from uuid import uuid4
 
+from bottle import FormsDict
+
 import yaml
 
 from app import config
 from app.RSubprocess import RSubprocess
 
 INPUT_DIR = "/mnt/input"
-TEMP_DIR = "/app/temp"
+TEMP_DIR = "/tmp/featurecloud"
 OUTPUT_DIR = "/mnt/output"
 
 
@@ -92,6 +94,10 @@ def write_binary_file(data, filename):
 		print('[ERROR] Could not write result file ', filename, '.', e)
 
 
+def check_if_config_file_exists():
+	return os.path.isfile(INPUT_DIR + '/config.yml')
+
+
 def read_config(is_coordinator):
 	"""
 	Read in the config.yml in the input directory. Save the parameters in redis.
@@ -102,93 +108,187 @@ def read_config(is_coordinator):
 	with open(INPUT_DIR + '/config.yml') as f:
 		config_file = yaml.load(f, Loader=yaml.FullLoader)['fc_grandforest']
 
-		config.add_option('INPUT_DIR', INPUT_DIR)
-		config.add_option('TEMP_DIR', TEMP_DIR)
-		config.add_option('OUTPUT_DIR', OUTPUT_DIR)
+	config.add_option('INPUT_DIR', INPUT_DIR)
+	config.add_option('TEMP_DIR', TEMP_DIR)
+	config.add_option('OUTPUT_DIR', OUTPUT_DIR)
 
-		if is_coordinator:
-			config.add_option('grandforest_method', config_file['global_options']['grandforest_method'])
-			config.add_option('grandforest_treetype', config_file['global_options']['grandforest_treetype'])
-			config.add_option('number_of_trees', config_file['global_options']['number_of_trees'])
-			config.add_option('minimal_node_size', config_file['global_options']['minimal_node_size'])
-			config.add_option('seed', config_file['global_options']['seed'])
-			if config_file['global_options']['interaction_network'] == 'biogrid':
-				config.add_option('interaction_network_filename', 'biogrid')
-				config.add_option('interaction_network_filepath', '/app/interaction_networks/biogrid.tsv')
-				config.add_option('interaction_network_separator', '\t')
-			elif config_file['global_options']['interaction_network'] == 'htridb':
-				config.add_option('interaction_network_filename', 'htridb')
-				config.add_option('interaction_network_filepath', '/app/interaction_networks/htridb.tsv')
-				config.add_option('interaction_network_separator', '\t')
-			elif config_file['global_options']['interaction_network'] == 'iid':
-				config.add_option('interaction_network_filename', 'iid')
-				config.add_option('interaction_network_filepath', '/app/interaction_networks/iid.tsv')
-				config.add_option('interaction_network_separator', '\t')
-			elif config_file['global_options']['interaction_network'] == 'regnetwork':
-				config.add_option('interaction_network_filename', 'regnetwork')
-				config.add_option('interaction_network_filepath', '/app/interaction_networks/regnetwork.tsv')
-				config.add_option('interaction_network_separator', '\t')
-			else:
-				config.add_option('interaction_network_filename', config_file['global_options']['interaction_network'])
-				config.add_option('interaction_network_filepath',
-								  INPUT_DIR + '/' + config_file['global_options']['interaction_network'])
-				config.add_option('interaction_network_separator',
-								  config_file['global_options']['interaction_network_separator'])
-
-			# Check if coordinator config options are set correctly
-			if not config.get_option('grandforest_method') in {'supervised', 'unsupervised'}:
-				print('[IO] Config File Error.')
-				raise ValueError("grandforest_method can either be 'supervised' or 'unsupervised'")
-
-			if not config.get_option('grandforest_treetype') in {'classification', 'regression', 'survival',
-																 'probability'}:
-				print('[IO] Config File Error.')
-				raise ValueError(
-					"grandforest_treetype can be 'classification', 'regression', 'survival' or 'probability'")
-
-		# Client config options
-		# local options
-		if str(config_file['local_options']['prediction']) == 'True':
-			config.add_option('prediction', True)
-		elif str(config_file['local_options']['prediction']) == 'False':
-			config.add_option('prediction', False)
+	if is_coordinator:
+		config.add_option('grandforest_method', config_file['global_options']['grandforest_method'])
+		config.add_option('grandforest_treetype', config_file['global_options']['grandforest_treetype'])
+		config.add_option('number_of_trees', config_file['global_options']['number_of_trees'])
+		config.add_option('minimal_node_size', config_file['global_options']['minimal_node_size'])
+		config.add_option('seed', config_file['global_options']['seed'])
+		if config_file['global_options']['interaction_network'] == 'biogrid':
+			config.add_option('interaction_network_filename', 'biogrid')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/biogrid.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif config_file['global_options']['interaction_network'] == 'htridb':
+			config.add_option('interaction_network_filename', 'htridb')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/htridb.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif config_file['global_options']['interaction_network'] == 'iid':
+			config.add_option('interaction_network_filename', 'iid')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/iid.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif config_file['global_options']['interaction_network'] == 'regnetwork':
+			config.add_option('interaction_network_filename', 'regnetwork')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/regnetwork.tsv')
+			config.add_option('interaction_network_separator', '\t')
 		else:
+			config.add_option('interaction_network_filename', config_file['global_options']['interaction_network'])
+			config.add_option('interaction_network_filepath',
+								INPUT_DIR + '/' + config_file['global_options']['interaction_network'])
+			config.add_option('interaction_network_separator',
+								config_file['global_options']['interaction_network_separator'])
+
+		# Check if coordinator config options are set correctly
+		if not config.get_option('grandforest_method') in {'supervised', 'unsupervised'}:
 			print('[IO] Config File Error.')
-			raise ValueError("prediction can be 'True' or 'False'")
+			raise ValueError("grandforest_method can either be 'supervised' or 'unsupervised'")
 
-		# local files
-		try:
-			config.add_option('expression_data_dependent_variable_name',
-						  config_file['local_files']['expression_data_dependent_variable_name'])
-		except KeyError:
-			pass
+		if not config.get_option('grandforest_treetype') in {'classification', 'regression', 'survival',
+																'probability'}:
+			print('[IO] Config File Error.')
+			raise ValueError(
+				"grandforest_treetype can be 'classification', 'regression', 'survival' or 'probability'")
 
-		try:
-			config.add_option('expression_data_survival_event',
-						  config_file['local_files']['expression_data_survival_event'])
-			config.add_option('expression_data_survival_time',
-							  config_file['local_files']['expression_data_survival_time'])
-		except KeyError:
-			pass
+	# Client config options
+	# local options
+	if str(config_file['local_options']['prediction']) == 'True':
+		config.add_option('prediction', True)
+	elif str(config_file['local_options']['prediction']) == 'False':
+		config.add_option('prediction', False)
+	else:
+		print('[IO] Config File Error.')
+		raise ValueError("prediction can be 'True' or 'False'")
 
-		config.add_option('expression_data_separator', config_file['local_files']['expression_data_separator'])
-		config.add_option('expression_data_filename', config_file['local_files']['expression_data'])
+	# local files
+	try:
+		config.add_option('expression_data_dependent_variable_name',
+						config_file['local_files']['expression_data_dependent_variable_name'])
+	except KeyError:
+		pass
 
-		# split
-		config.add_option('split_mode', config_file['split']['mode'])
-		config.add_option('split_dir', config_file['split']['dir'])
+	try:
+		config.add_option('expression_data_survival_event',
+						config_file['local_files']['expression_data_survival_event'])
+		config.add_option('expression_data_survival_time',
+							config_file['local_files']['expression_data_survival_time'])
+	except KeyError:
+		pass
 
-		splits = {}
+	config.add_option('expression_data_separator', config_file['local_files']['expression_data_separator'])
+	config.add_option('expression_data_filename', config_file['local_files']['expression_data'])
 
-		if config.get_option('split_mode') == 'directory':
-			splits = dict.fromkeys(
-				[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
+	# split
+	config.add_option('split_mode', config_file['split']['mode'])
+	config.add_option('split_dir', config_file['split']['dir'])
+
+	splits = {}
+
+	if config.get_option('split_mode') == 'directory':
+		splits = dict.fromkeys(
+			[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
+	else:
+		splits[INPUT_DIR + '/'] = None
+
+	for split in splits.keys():
+		os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+
+	shutil.copyfile(INPUT_DIR + '/config.yml', OUTPUT_DIR + '/config.yml')
+
+	return splits
+
+
+def read_config_from_frontend(is_coordinator, conf_input: FormsDict):
+	"""
+	Read in the config.yml in the input directory. Save the parameters in redis.
+	:return: None
+	"""
+
+	print('[IO] Parsing config from Frontend.')
+
+	config.add_option('INPUT_DIR', INPUT_DIR)
+	config.add_option('TEMP_DIR', TEMP_DIR)
+	config.add_option('OUTPUT_DIR', OUTPUT_DIR)
+
+	if is_coordinator:
+		if conf_input.get('grandforest_method')[0] == 's':
+			config.add_option('grandforest_method', 'supervised')
 		else:
-			splits[INPUT_DIR + '/'] = None
+			config.add_option('grandforest_method', 'unsupervised')
+		config.add_option('grandforest_treetype', conf_input.get('grandforest_method')[2:])
+		config.add_option('number_of_trees', conf_input.get('number_of_trees'))
+		config.add_option('minimal_node_size', conf_input.get('minimal_node_size'))
+		config.add_option('seed', conf_input.get('seed'))
+		if conf_input.get('interaction_network') == 'biogrid':
+			config.add_option('interaction_network_filename', 'biogrid')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/biogrid.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif conf_input.get('interaction_network') == 'htridb':
+			config.add_option('interaction_network_filename', 'htridb')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/htridb.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif conf_input.get('interaction_network') == 'iid':
+			config.add_option('interaction_network_filename', 'iid')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/iid.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		elif conf_input.get('interaction_network') == 'regnetwork':
+			config.add_option('interaction_network_filename', 'regnetwork')
+			config.add_option('interaction_network_filepath', '/app/interaction_networks/regnetwork.tsv')
+			config.add_option('interaction_network_separator', '\t')
+		else:
+			config.add_option('interaction_network_filename', conf_input.get('interaction_network_file_name'))
+			config.add_option('interaction_network_filepath',
+								INPUT_DIR + '/' + conf_input.get('interaction_network_file_name'))
+			config.add_option('interaction_network_separator', conf_input.get('interaction_network_separator').replace('\\t', '\t'))
 
-		for split in splits.keys():
-			os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+	# Client config options
+	# local options
+	if str(conf_input.get('prediction')) == 'True':
+		config.add_option('prediction', True)
+	elif str(conf_input.get('prediction')) == 'False':
+		config.add_option('prediction', False)
+	else:
+		print('[IO] Config File Error.')
+		raise ValueError("prediction can be 'True' or 'False'")
 
+	# local files
+	try:
+		config.add_option('expression_data_dependent_variable_name',
+						conf_input.get('expression_data_dependent_variable_name'))
+	except KeyError:
+		pass
+
+	try:
+		config.add_option('expression_data_survival_event',
+						conf_input.get('expression_data_survival_event'))
+		config.add_option('expression_data_survival_time',
+						conf_input.get('expression_data_survival_time'))
+	except KeyError:
+		pass
+
+	config.add_option('expression_data_separator', conf_input.get('expression_data_separator').replace('\\t', '\t'))
+	config.add_option('expression_data_filename', conf_input.get('expression_data_file'))
+
+	# split
+	config.add_option('split_mode', conf_input.get('split_mode'))
+	config.add_option('split_dir', conf_input.get('split_dir'))
+
+	splits = {}
+
+	if config.get_option('split_mode') == 'directory':
+		splits = dict.fromkeys(
+			[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
+	else:
+		splits[INPUT_DIR + '/'] = None
+
+	for split in splits.keys():
+		os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+
+	try:
 		shutil.copyfile(INPUT_DIR + '/config.yml', OUTPUT_DIR + '/config.yml')
+	except FileNotFoundError:
+		pass
 
-		return splits
+	return splits

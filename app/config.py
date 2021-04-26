@@ -31,3 +31,7 @@ def add_option(key, value):
 
 def get_option(key):
 	return config_dict[key]
+
+
+def print_config():
+	print(config_dict)
