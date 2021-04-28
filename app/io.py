@@ -19,7 +19,8 @@ OUTPUT_DIR = "/mnt/output"
 def get_input_filesizes(splits):
 	filesizes = dict()
 	for split in splits.keys():
-		filesizes[split] = os.path.getsize(split + '/' + config.get_option('expression_data_filename'))
+		with open(split + '/' + config.get_option('expression_data_filename')) as file:
+			filesizes[split] = sum(1 for _ in file)
 	return filesizes
 
 
@@ -58,40 +59,19 @@ def read_input(input_filepath, input_filename, input_separator):
 		return None
 
 
-def write_output(data, split, output_directory_name):
-	# create output directory
-	os.makedirs(split + '/' + output_directory_name)
-
-	write_binary_file(base64.decodebytes(data.encode('utf-8')),
-					  split + '/' + output_directory_name + '/' + 'model' + '.RData')
-
-	command = ["/app/app/R/grandforest.analyze_results.R",
-			   split + '/' + output_directory_name + '/' + 'model' + '.RData',
-			   TEMP_DIR + '/' + 'interaction_network.RData',
-			   split + '/' + output_directory_name + '/']
-
-	print('[IO] Starting RSubprocess to analyze the ' + output_directory_name + '...')
-	analyzing_results_subprocess = RSubprocess(command)
-	analyzing_results_subprocess.start()
-	print('[IO] Started RSubprocess to analyze the ' + output_directory_name)
-	analyzing_results_subprocess.join()
-	print('[IO] Finished RSubprocess to analyze the ' + output_directory_name)
-
-
-def write_binary_file(data, filename):
+def write_output(model, model_name, split):
 	"""
 	Write the results to the output directory
-	:param data: binary data to be written as RData File
-	:param filename: output filename
+	:param model: binary data to be written as RData File
+	:param model_name: model name ('local_model' or 'global_model')
+	:param split: current split
 	:return: None
 	"""
-	try:
-		print("[IO] Writing results to output folder.")
-		output_file_writer = open(filename, 'wb')
-		output_file_writer.write(data)
-		output_file_writer.close()
-	except Exception as e:
-		print('[ERROR] Could not write result file ', filename, '.', e)
+	print("[IO] Writing results to output folder.")
+	# create output directory
+	os.makedirs(split + '/' + model_name)
+	open(split + '/' + model_name + '/' + 'model' + '.RData', 'wb').write(
+		base64.decodebytes(model.encode('utf-8')))
 
 
 def check_if_config_file_exists():
@@ -184,21 +164,6 @@ def read_config(is_coordinator):
 	config.add_option('split_mode', config_file['split']['mode'])
 	config.add_option('split_dir', config_file['split']['dir'])
 
-	splits = {}
-
-	if config.get_option('split_mode') == 'directory':
-		splits = dict.fromkeys(
-			[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
-	else:
-		splits[INPUT_DIR + '/'] = None
-
-	for split in splits.keys():
-		os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
-
-	shutil.copyfile(INPUT_DIR + '/config.yml', OUTPUT_DIR + '/config.yml')
-
-	return splits
-
 
 def read_config_from_frontend(is_coordinator, conf_input: FormsDict):
 	"""
@@ -275,20 +240,75 @@ def read_config_from_frontend(is_coordinator, conf_input: FormsDict):
 	config.add_option('split_mode', conf_input.get('split_mode'))
 	config.add_option('split_dir', conf_input.get('split_dir'))
 
-	splits = {}
 
-	if config.get_option('split_mode') == 'directory':
-		splits = dict.fromkeys(
-			[f.path for f in os.scandir(f'{INPUT_DIR}/{config.get_option("split_dir")}') if f.is_dir()])
-	else:
-		splits[INPUT_DIR + '/'] = None
-
-	for split in splits.keys():
-		os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+def check_config(splits):
+	# Test text variables
+	try:
+		int(config.get_option('number_of_trees'))
+	except ValueError:
+		print('[IO] Config File Error.')
+		print(f"Number of Trees variable is not a valid number: {config.get_option('number_of_trees')}")
+		return False
 
 	try:
-		shutil.copyfile(INPUT_DIR + '/config.yml', OUTPUT_DIR + '/config.yml')
-	except FileNotFoundError:
-		pass
+		int(config.get_option('minimal_node_size'))
+	except ValueError:
+		print('[IO] Config File Error.')
+		print(f"Minimal Node Size variable is not a valid number: {config.get_option('minimal_node_size')}")
+		return False
 
-	return splits
+	if config.get_option('seed') != 'None' and config.get_option('seed') is not None:
+		try:
+			int(config.get_option('seed'))
+		except ValueError:
+			print('[IO] Config File Error.')
+			print(f"Seed variable is not a valid number: {config.get_option('seed')}")
+			return False
+
+	# Test interaction network file
+	try:
+		open(config.get_option('interaction_network_filepath'), 'r')
+	except FileNotFoundError:
+		print('[IO] Config File Error.')
+		print(f"Interaction Network File {config.get_option('interaction_network_filename')} not found.")
+		return False
+
+	# Test expression data files in each split
+	for split in splits.keys():
+		try:
+			open(split + '/' + config.get_option('expression_data_filename'), 'r')
+		except FileNotFoundError:
+			print('[IO] Config File Error.')
+			print(f"Expression data File {config.get_option('expression_data_filename')} not found.")
+			return False
+
+		with open(split + '/' + config.get_option('expression_data_filename'), 'r') as file:
+			firstline = file.readline()
+			if config.get_option('grandforest_treetype') == 'survival':
+				if firstline.find(config.get_option("expression_data_survival_event")) == -1 or firstline.find(config.get_option("expression_data_survival_time")) == -1:
+					print('[IO] Config File Error.')
+					print(f"expression_data_survival_event {config.get_option('expression_data_survival_event')} or expression_data_survival_time {config.get_option('expression_data_survival_time')} not found in Expression data File {config.get_option('expression_data_filename')}.")
+					return False
+
+			else:
+				if firstline.find(config.get_option("expression_data_dependent_variable_name")) == -1:
+					print('[IO] Config File Error.')
+					print(f"expression_data_dependent_variable_name {config.get_option('expression_data_dependent_variable_name')} not found in Expression data File {config.get_option('expression_data_filename')}.")
+					return False
+	return True
+
+
+def create_html_figures():
+	figures = {}
+	figures['feature_importance_plot_importances'] = None
+	figures['feature_importance_plot_network'] = None
+	figures['endophenotypes_plot_heatmap'] = None
+	figures['endophenotypes_plot_survival'] = None
+	return figures
+
+
+def create_html_tables():
+	tables = {}
+	tables['feature_importance_table'] = None
+	tables['prediction_results_table'] = None
+	return tables

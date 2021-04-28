@@ -1,6 +1,7 @@
 import base64
 import os
 import sys
+import errno
 from uuid import uuid4
 
 from app import config
@@ -19,12 +20,12 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 	os.makedirs(temp_path)
 
 	open(temp_path + '/' + 'expression_data.RData', 'wb').write(base64.decodebytes(expression_data.encode('utf-8')))
-	open(config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData', 'wb').write(base64.decodebytes(interaction_network.encode('utf-8')))
+	open(temp_path + '/' + 'interaction_network.RData', 'wb').write(base64.decodebytes(interaction_network.encode('utf-8')))
 
 	if config.get_option('grandforest_method') == 'supervised':
 		command = ["/app/app/R/grandforest.train_model.supervised.R",
 				   temp_path + '/' + 'expression_data.RData',
-				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
+				   temp_path + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees_per_split')[split]),
 				   str(config.get_option('minimal_node_size')),
 				   str(config.get_option('seed')),
@@ -36,7 +37,7 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 	else:
 		command = ["/app/app/R/grandforest.train_model.unsupervised.R",
 				   temp_path + '/' + 'expression_data.RData',
-				   config.get_option('TEMP_DIR') + '/' + 'interaction_network.RData',
+				   temp_path + '/' + 'interaction_network.RData',
 				   str(config.get_option('number_of_trees_per_split')[split]),
 				   str(config.get_option('minimal_node_size')),
 				   str(config.get_option('seed')),
@@ -98,10 +99,17 @@ def __aggregate_grandforest_models(global_data):
 def __predict_with_grandforest_model(global_model, expression_data, split):
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
+
 	open(temp_path + '/' + 'global_model.RData', 'wb').write(
 		base64.decodebytes(global_model.encode('utf-8')))
 	open(temp_path + '/' + 'expression_data.RData', 'wb').write(
 		base64.decodebytes(expression_data.encode('utf-8')))
+
+	try:
+		os.makedirs(split)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
 
 	if config.get_option('grandforest_method') == 'supervised':
 		command = ["/app/app/R/grandforest.predict.supervised.R",
@@ -123,6 +131,47 @@ def __predict_with_grandforest_model(global_model, expression_data, split):
 	print('[ALGO] Finished RSubprocess to predict local expression data with the global GrandForest model')
 
 
+def __analyze_results(model, model_name, interaction_network, expression_data, split):
+	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
+	os.makedirs(temp_path)
+
+	open(temp_path + '/' + 'expression_data.RData', 'wb').write(base64.decodebytes(expression_data.encode('utf-8')))
+	open(temp_path + '/' + 'interaction_network.RData', 'wb').write(
+		base64.decodebytes(interaction_network.encode('utf-8')))
+	open(temp_path + '/' + 'model.RData', 'wb').write(
+		base64.decodebytes(model.encode('utf-8')))
+
+	try:
+		os.makedirs(split + '/' + model_name)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
+
+	if config.get_option('grandforest_treetype') == 'survival':
+		command = ["/app/app/R/grandforest.analyze_results.R",
+				   temp_path + '/' + 'model' + '.RData',
+				   temp_path + '/' + 'interaction_network.RData',
+				   temp_path + '/' + 'expression_data.RData',
+				   str(config.get_option('expression_data_survival_event')),
+				   str(config.get_option('expression_data_survival_time')),
+				   split + '/' + model_name + '/']
+	else:
+		command = ["/app/app/R/grandforest.analyze_results.R",
+				   temp_path + '/' + 'model' + '.RData',
+				   temp_path + '/' + 'interaction_network.RData',
+				   temp_path + '/' + 'expression_data.RData',
+				   'None',
+				   'None',
+				   split + '/' + model_name + '/']
+
+	print('[IO] Starting RSubprocess to analyze the ' + model_name + '...')
+	analyzing_results_subprocess = RSubprocess(command)
+	analyzing_results_subprocess.start()
+	print('[IO] Started RSubprocess to analyze the ' + model_name)
+	analyzing_results_subprocess.join()
+	print('[IO] Finished RSubprocess to analyze the ' + model_name)
+
+
 # Functions exposed to AppLogic
 
 def local_computation(expression_data, interaction_network, split):
@@ -139,10 +188,15 @@ def local_prediction(local_model, expression_data, split):
 	__predict_with_grandforest_model(local_model, expression_data, split)
 
 
+def result_analysis(local_model, global_model, expression_data, interaction_network, split):
+	__analyze_results(local_model, 'local_model', expression_data, interaction_network, split)
+	__analyze_results(global_model, 'global_model', expression_data, interaction_network, split)
+
+
 def write_results(local_model, global_model, split):
 	"""
 	Write the results to the output directory and delete the TEMP directory.
 	:return: None
 	"""
-	write_output(local_model, split, 'local_model')
-	write_output(global_model, split, 'global_model')
+	write_output(local_model, 'local_model', split)
+	write_output(global_model, 'global_model', split)

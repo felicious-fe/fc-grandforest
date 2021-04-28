@@ -5,10 +5,11 @@ import sys
 import threading
 import time
 import math
+import shutil
 
 from app import config
-from app.algo import local_computation, global_aggregation, local_prediction, write_results
-from app.io import get_input_filesizes, check_if_config_file_exists, read_config, read_config_from_frontend, read_input
+from app.algo import local_computation, global_aggregation, local_prediction, result_analysis, write_results
+from app.io import get_input_filesizes, check_if_config_file_exists, read_config, read_config_from_frontend, read_input, check_config
 
 
 class AppLogic:
@@ -61,6 +62,24 @@ class AppLogic:
 		self.status_available = False
 		return self.data_outgoing
 
+	def create_splits(self):
+		splits = {}
+
+		if config.get_option('split_mode') == 'directory':
+			splits = dict.fromkeys(
+				[f.path for f in os.scandir(f'{config.get_option("INPUT_DIR")}/{config.get_option("split_dir")}') if
+				 f.is_dir()])
+		else:
+			splits[config.get_option("INPUT_DIR") + '/'] = None
+
+		for split in splits.keys():
+			os.makedirs(split.replace("/input/", "/output/"), exist_ok=True)
+
+		if check_if_config_file_exists():
+			shutil.copyfile(config.get_option('INPUT_DIR') + '/config.yml', config.get_option('OUTPUT_DIR') + '/config.yml')
+
+		self.split_expression_data = splits
+
 	def app_flow(self):
 		# This method contains a state machine for the client and coordinator instance
 		# Coordinator Workflow: 1 -> 2 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
@@ -91,16 +110,23 @@ class AppLogic:
 					
 					if check_if_config_file_exists():
 						self.progress = 'parsing config file'
-						self.split_expression_data = read_config(self.master)
+						read_config(self.master)
+						self.create_splits()
 					else:
 						print('[IO] No config file found. Waiting for user input in the FrontEnd...')
-						config.add_option('input_form', False)
-						self.progress = 'getting config frontend'
-						while config.get_option('input_form') is False:
-							time.sleep(10)
-						self.progress = 'parsing config frontend'
-						print('[IO] Received FrontEnd Input Form. Continuing GrandForest workflow...')
-						self.split_expression_data = read_config_from_frontend(self.master, config.get_option('input_form'))
+						config_is_valid = False
+						while config_is_valid is False:
+							config.add_option('input_form', False)
+							self.progress = 'getting config frontend'
+							while config.get_option('input_form') is False:
+								time.sleep(10)
+
+							self.progress = 'parsing config frontend'
+							print('[IO] Received FrontEnd Input Form. Continuing GrandForest workflow...')
+							read_config_from_frontend(self.master, config.get_option('input_form'))
+							self.create_splits()
+							if check_config(self.split_expression_data):
+								config_is_valid = True
 
 					self.local_models = dict.fromkeys(self.split_expression_data.keys())
 
@@ -257,10 +283,12 @@ class AppLogic:
 
 			if state == state_write_results:
 				self.progress = 'writing results'
-				if config.get_option('prediction'):
-					for split in self.split_expression_data.keys():
+				for split in self.split_expression_data.keys():
+					if config.get_option('prediction'):
 						local_prediction(self.global_models[split], self.split_expression_data[split], split.replace("/input/", "/output/"))
-						write_results(self.local_models[split], self.global_models[split], split.replace("/input/", "/output/"))
+					write_results(self.local_models[split], self.global_models[split], split.replace("/input/", "/output/"))
+					result_analysis(self.local_models[split], self.global_models[split], self.interaction_network,
+									self.split_expression_data[split], split.replace("/input/", "/output/"))
 
 				if self.master:
 					self.data_incoming = ['DONE']
