@@ -300,15 +300,47 @@ def check_config(splits):
 
 def create_html_figures():
 	figures = {}
-	figures['feature_importance_plot_importances'] = None
-	figures['feature_importance_plot_network'] = None
-	figures['endophenotypes_plot_heatmap'] = None
-	figures['endophenotypes_plot_survival'] = None
+	svg_start = '<svg width="100" height="100">'
+	svg_end = '</svg>'
+
+	figures['feature_importance_plot_importances'] = svg_start + open(config.get_option("OUTPUT_DIR") + '/global_model/feature_importances.svg').read() + svg_end
+	figures['feature_importance_plot_network'] = svg_start + open(config.get_option("OUTPUT_DIR") + '/global_model/interaction_subnetwork.svg').read() + svg_end
+	figures['endophenotypes_plot_heatmap'] = svg_start + open(config.get_option("OUTPUT_DIR") + '/global_model/patient_clustering_heatmap.svg').read() + svg_end
+	try:
+		figures['endophenotypes_plot_survival'] = svg_start + open(config.get_option("OUTPUT_DIR") + '/global_model/patient_clustering_survival.svg').read() + svg_end
+	except FileNotFoundError:
+		figures['endophenotypes_plot_survival'] = ""
 	return figures
+
+
+def tsv_to_html(filename, sep):
+	html = "<table>"
+	with open(filename, 'r') as file:
+		html = html + "<tr>"
+		line = file.readline().split(sep)
+		for val in line:
+			html = html + f"<td>{val}</td>"
+		html = html + "</tr>"
+	html = html + "</table>"
+	return html
 
 
 def create_html_tables():
 	tables = {}
-	tables['feature_importance_table'] = None
-	tables['prediction_results_table'] = None
+	tables['feature_importance_table'] = tsv_to_html(config.get_option("OUTPUT_DIR") + '/global_model/feature_importances.tsv', sep="\t")
+	try:
+		tables['prediction_results_table'] = tsv_to_html(config.get_option("OUTPUT_DIR") + '/Y_pred.tsv', sep="\t")
+	except FileNotFoundError:
+		tables['prediction_results_table'] = ""
 	return tables
+
+
+def create_result_html():
+	figures = create_html_figures()
+	tables = create_html_tables()
+
+	result_html = open("/app/app/templates/result.tpl", 'r').read()
+
+	r"{{\S*}}"
+
+
