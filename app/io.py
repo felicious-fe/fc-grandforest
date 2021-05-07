@@ -17,6 +17,11 @@ OUTPUT_DIR = "/mnt/output"
 
 
 def get_input_filesizes(splits):
+	"""
+	Gets the amount of lines in the expression data files for each split.
+	:param splits: dictionary with all splits as path to the input directory as keys
+	:return: dictionary of amount of lines in the expression data files for each split
+	"""
 	filesizes = dict()
 	for split in splits.keys():
 		with open(split + '/' + config.get_option('expression_data_filename')) as file:
@@ -26,8 +31,12 @@ def get_input_filesizes(splits):
 
 def read_input(input_filepath, input_filename, input_separator):
 	"""
-	Read in the input data from the input directory
-	:return: Data or None if File could not be read
+	Executes the RScript 'grandforest.read_data_frame.R' to read in a CSV/TSV file
+	from the input directory to a base64 encoded RData file string with a "data" object insinde.
+	:param input_filepath: Full path to the CSV/TSV file
+	:param input_filename: only the filename of the CSV/TSV file
+	:param input_separator: sperator used in the CSV/TSV file
+	:return: base64 encoded RData file string or None if File could not be read
 	"""
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
@@ -61,10 +70,10 @@ def read_input(input_filepath, input_filename, input_separator):
 
 def write_output(model, model_name, split):
 	"""
-	Write the results to the output directory
-	:param model: binary data to be written as RData File
-	:param model_name: model name ('local_model' or 'global_model')
-	:param split: current split
+	Write the results to split/model_name/model.RData.
+	:param model: base64 encoded model file to be written to the file system
+	:param model_name: folder name 
+	:param split: current split as path to the output directory
 	:return: None
 	"""
 	print("[IO] Writing results to output folder.")
@@ -80,10 +89,9 @@ def check_if_config_file_exists():
 
 def read_config(is_coordinator):
 	"""
-	Read in the config.yml in the input directory. Save the parameters in redis.
+	Read in the config.yml in the input directory. Save the parameters in the global config dictionary.
 	:return: None
 	"""
-
 	print('[IO] Read config file.')
 	with open(INPUT_DIR + '/config.yml') as f:
 		config_file = yaml.load(f, Loader=yaml.FullLoader)['fc_grandforest']
@@ -167,10 +175,11 @@ def read_config(is_coordinator):
 
 def read_config_from_frontend(is_coordinator, conf_input: FormsDict):
 	"""
-	Read in the config.yml in the input directory. Save the parameters in redis.
-	:return: None
+	Read in the config from the frontend FormsDict. Save the parameters in the global config dictionary.
+	:param is_coordinator: Boolean, if this Participant is the coordinator
+	:param conf_input: Bottle FormsDict of the frontend input
+	:return: True, if the input is correct, False if there are non valid inputs
 	"""
-
 	print('[IO] Parsing config from Frontend.')
 
 	config.add_option('INPUT_DIR', INPUT_DIR)
@@ -242,6 +251,12 @@ def read_config_from_frontend(is_coordinator, conf_input: FormsDict):
 
 
 def check_config(splits):
+	"""
+	Checks the config from the frontend FormsDict. Is a bit Runtime intensive, so this method is not
+	executed in a workflow with configuration file.
+	:param splits: Boolean, if this Participant is the coordinator
+	:return: True, if the input is correct, False if there are non valid inputs
+	"""
 	# Test text variables
 	try:
 		int(config.get_option('number_of_trees'))
@@ -313,7 +328,7 @@ def create_html_figures():
 	return figures
 
 
-def tsv_to_html(filename, sep):
+def __tsv_to_html(filename, sep):
 	html = "<table>"
 	with open(filename, 'r') as file:
 		html = html + "<tr>"
@@ -327,20 +342,19 @@ def tsv_to_html(filename, sep):
 
 def create_html_tables():
 	tables = {}
-	tables['feature_importance_table'] = tsv_to_html(config.get_option("OUTPUT_DIR") + '/global_model/feature_importances.tsv', sep="\t")
+	tables['feature_importance_table'] = __tsv_to_html(config.get_option("OUTPUT_DIR") + '/global_model/feature_importances.tsv', sep="\t")
 	try:
-		tables['prediction_results_table'] = tsv_to_html(config.get_option("OUTPUT_DIR") + '/Y_pred.tsv', sep="\t")
+		tables['prediction_results_table'] = __tsv_to_html(config.get_option("OUTPUT_DIR") + '/Y_pred.tsv', sep="\t")
 	except FileNotFoundError:
 		tables['prediction_results_table'] = ""
 	return tables
 
 
-def create_result_html():
-	figures = create_html_figures()
-	tables = create_html_tables()
-
-	result_html = open("/app/app/templates/result.tpl", 'r').read()
-
-	r"{{\S*}}"
-
-
+#def create_result_html():
+#	TODO: create html from the figures and tables and the bottle template.
+#	figures = create_html_figures()
+#	tables = create_html_tables()
+#
+#	result_html = open("/app/app/templates/result.tpl", 'r').read()
+#
+#	r"{{\S*}}"

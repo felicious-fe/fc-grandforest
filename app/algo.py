@@ -11,10 +11,13 @@ from app.io import write_output
 
 def __compute_local_grandforest_model(expression_data, interaction_network, split):
 	"""
-	Compute the local model and number of samples
-	:param expression_data: Local expression data as binary RData
-	:param interaction_network: Interaction Network as binary RData
-	:return: The local model as base64 encoded binary RData string and number of samples
+	Private Method.
+	Executes the RScript 'grandforest.train_model.supervised.R' or 'grandforest.train_model.unsupervised.R'
+	to train a local GrandForest model.
+	:param expression_data: Local expression data as base64 encoded RData file with "data" object inside
+	:param interaction_network: Interaction Network as base64 encoded RData file with "data" object inside
+	:param split: current split as path to the output directory
+	:return: base64 encoded RData file with the local model as "model" object inside
 	"""
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
@@ -53,20 +56,17 @@ def __compute_local_grandforest_model(expression_data, interaction_network, spli
 	# save local model as base64 encoded string
 	local_model = base64.b64encode(open(temp_path + '/' + 'local_model.RData', 'rb').read()).decode('utf-8')
 
-	# save amount of lines - 1 (header line) as weighting constant
-	with open(split + '/' + config.get_option('expression_data_filename')) as expression_data_file:
-		nr_samples = sum(1 for line in expression_data_file) - 1
+	print(f'[ALGO] Local computation of client {config.get_option("id")}: {sys.getsizeof(local_model)} Bytes successful')
 
-	print(f'[ALGO] Local computation of client {config.get_option("id")}: {sys.getsizeof(local_model)} Bytes with {nr_samples} samples successful')
-
-	return local_model, nr_samples
+	return local_model
 
 
 def __aggregate_grandforest_models(global_data):
 	"""
-	Aggregate the local models to a global model
-	:param global_data: List of local models and local number of samples
-	:return: The global model as base64 encoded binary RData string
+	Private Method.
+	Executes the RScript 'grandforest.sum_models.R' to sum all the local models to a global model.
+	:param global_data: Local models as a list of base64 encoded RData files with one "model" object per file inside
+	:return: base64 encoded RData file with the aggregated global model as "model" object inside
 	"""
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
@@ -88,6 +88,7 @@ def __aggregate_grandforest_models(global_data):
 		os.remove(temp_path + '/' + 'forest2.RData')
 	print('[ALGO] Finished RSubprocesses to aggregate the GrandForest models')
 
+	# save global model as base64 encoded string
 	global_model = base64.b64encode(open(temp_path + '/' + 'forest1.RData', 'rb').read()).decode('utf-8')
 	os.remove(temp_path + '/' + 'forest1.RData')
 	print(
@@ -97,6 +98,16 @@ def __aggregate_grandforest_models(global_data):
 
 
 def __predict_with_grandforest_model(global_model, expression_data, split):
+	"""
+	Private Method.
+	Executes the RScript 'grandforest.predict.supervised.R' or 'grandforest.predict.unsupervised.R'
+	to predict the local expression data with the global model and write the results to the split
+	output directory.
+	:param global_model: global model as base64 encoded RData file
+	:param expression_data: Local expression data as base64 encoded RData file
+	:param split: current split as path to the output directory
+	:return: None
+	"""
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
 
@@ -132,12 +143,21 @@ def __predict_with_grandforest_model(global_model, expression_data, split):
 
 
 def __analyze_results(model, model_name, interaction_network, expression_data, split):
+	"""
+	Private Method.
+	Executes the RScript 'grandforest.analyze_results.R' to create the plots and tables
+	of the feature importance and endophenotyping analyses in the split output directory.
+	:param interaction_network: Interaction Network as base64 encoded RData file with "data" object inside
+	:param expression_data: Local expression data as base64 encoded RData file with "data" object inside
+	:param split: current split as path to the output directory
+	:return: None
+	"""
 	temp_path = config.get_option('TEMP_DIR') + '/' + str(uuid4())
 	os.makedirs(temp_path)
 
-	open(temp_path + '/' + 'expression_data.RData', 'wb').write(base64.decodebytes(expression_data.encode('utf-8')))
 	open(temp_path + '/' + 'interaction_network.RData', 'wb').write(
 		base64.decodebytes(interaction_network.encode('utf-8')))
+	open(temp_path + '/' + 'expression_data.RData', 'wb').write(base64.decodebytes(expression_data.encode('utf-8')))
 	open(temp_path + '/' + 'model.RData', 'wb').write(
 		base64.decodebytes(model.encode('utf-8')))
 
@@ -175,27 +195,62 @@ def __analyze_results(model, model_name, interaction_network, expression_data, s
 # Functions exposed to AppLogic
 
 def local_computation(expression_data, interaction_network, split):
-	local_model, nr_samples = __compute_local_grandforest_model(expression_data, interaction_network, split)
+	"""
+	This method is exposed to AppLogic.
+	Computes the local model.
+	:param expression_data: Local expression data as base64 encoded RData file with "data" object inside
+	:param interaction_network: Interaction Network as base64 encoded RData file with "data" object inside
+	:param split: current split as path to the output directory
+	:return: base64 encoded RData file with the local model as "model" object inside
+	"""
+	local_model = __compute_local_grandforest_model(expression_data, interaction_network, split)
 	return local_model
 
 
 def global_aggregation(global_data):
+	"""
+	This method is exposed to AppLogic.
+	Aggregates the local models.
+	:param global_data: Local models as a list of base64 encoded RData files with one "model" object per file inside
+	:return: base64 encoded RData file with the aggregated global model as "model" object inside
+	"""
 	global_model = __aggregate_grandforest_models(global_data)
 	return global_model
 
 
-def local_prediction(local_model, expression_data, split):
-	__predict_with_grandforest_model(local_model, expression_data, split)
+def local_prediction(global_model, expression_data, split):
+	"""
+	This method is exposed to AppLogic.
+	Predicts local data with the global model and writes the results to the split output directory.
+	:param global_model: base64 encoded RData file with the global model as "model" object inside
+	:param expression_data: Local expression data as base64 encoded RData file with "data" object inside
+	:return: None
+	"""
+	__predict_with_grandforest_model(global_model, expression_data, split)
 
 
-def result_analysis(local_model, global_model, expression_data, interaction_network, split):
-	__analyze_results(local_model, 'local_model', expression_data, interaction_network, split)
-	__analyze_results(global_model, 'global_model', expression_data, interaction_network, split)
+def result_analysis(local_model, global_model, interaction_network, expression_data, split):
+	"""
+	This method is exposed to AppLogic.
+	Executes the result analysis and writes the results to the split output directory.
+	:param local_model: base64 encoded RData file with the local model as "model" object inside
+	:param global_model: base64 encoded RData file with the global model as "model" object inside
+	:param expression_data: Local expression data as base64 encoded RData file with "data" object inside
+	:param interaction_network: Interaction Network as base64 encoded RData file with "data" object inside
+	:param split: current split as path to the output directory
+	:return: None
+	"""
+	__analyze_results(local_model, 'local_model', interaction_network, expression_data, split)
+	__analyze_results(global_model, 'global_model', interaction_network, expression_data, split)
 
 
 def write_results(local_model, global_model, split):
 	"""
-	Write the results to the output directory and delete the TEMP directory.
+	This method is exposed to AppLogic.
+	Writes the local_model and global_model to the split output directory.
+	:param local_model: base64 encoded RData file with the local model as "model" object inside
+	:param global_model: base64 encoded RData file with the global model as "model" object inside
+	:param split: current split as path to the output directory
 	:return: None
 	"""
 	write_output(local_model, 'local_model', split)

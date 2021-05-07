@@ -3,6 +3,8 @@
 # Execute with args:
 # ranger.predict.R input_model.RData expression_data.RData dependent.variable.name output_directory_path
 
+# Predicts data with a ranger model, this script is only for testing purposes.
+
 suppressPackageStartupMessages({
   require(tidyverse)
   require(org.Hs.eg.db)

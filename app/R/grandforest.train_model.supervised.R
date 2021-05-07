@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.train_model.supervised.R expression_data_filepath interaction_network_filepath number_of_trees minimal_node_size seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
 
+# Trains a supervised GrandForest model
+
 suppressPackageStartupMessages({
   require(dplyr)
   require(grandforest)

@@ -3,6 +3,8 @@
 # Execute with args:
 # ranger.train_model.R expression_data_filepath number_of_trees minimal_node_size seed treetype dependent.variable.name survival.event.name survival.time.name result_forest.RData
 
+# Trains a ranger model, this script is only for testing purposes.
+
 suppressPackageStartupMessages({
   require(dplyr)
   require(ranger)

@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.train_model.unsupervised.R expression_data_filepath interaction_network_filepath number_of_trees minimal_node_size seed result_forest.RData
 
+# Trains an unsupervised GrandForest model
+
 suppressPackageStartupMessages({
   require(dplyr)
   require(grandforest)
@@ -34,11 +36,7 @@ data <- NULL
 
 
 # Remove all Variables from expression_data that are not in the interaction network
-<<<<<<< Updated upstream
 variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]])))
-=======
-variable.names <- intersect(colnames(expression_data), unique(c(interaction_network[[1]], interaction_network[[2]], required.columns)))
->>>>>>> Stashed changes
 expression_data <- dplyr::select(expression_data, all_of(variable.names))
 
 if(nrow(expression_data) < 2) {

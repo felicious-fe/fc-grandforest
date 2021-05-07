@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.analyze_results.R input_model.RData interaction_network.RData expression_data.RData survival.event.name survival.time.name output_directory_path
 
+# Analyzes the Results of a GrandForest Workflow. Creates 4*2 Plots in SVG and PNG and a TSV file with all feature importances.
+
 suppressPackageStartupMessages({
   require(tidyverse)
   require(org.Hs.eg.db)

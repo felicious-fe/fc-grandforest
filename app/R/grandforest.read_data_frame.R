@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.read_data_frame.R input_filepath separator output_filepath
 
+# Reads in a CSV/TSV into an RData file with a "data" data frame object
+
 suppressPackageStartupMessages({
   require(readr)
 })

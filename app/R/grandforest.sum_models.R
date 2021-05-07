@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.sum_models.R firstForest.RData secondForest.RData resultForest.RData
 
+# Sums two GrandForest models
+
 suppressPackageStartupMessages({
   require(grandforest)
   require(forcats)

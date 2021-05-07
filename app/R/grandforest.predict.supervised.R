@@ -3,6 +3,8 @@
 # Execute with args:
 # grandforest.predict.supervised.R input_model.RData expression_data.RData dependent.variable.name output_directory_path
 
+# Predicts data with a supervised GrandForest model
+
 suppressPackageStartupMessages({
   require(tidyverse)
   require(org.Hs.eg.db)

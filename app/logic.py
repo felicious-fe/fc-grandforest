@@ -63,6 +63,7 @@ class AppLogic:
 		return self.data_outgoing
 
 	def create_splits(self):
+		# This method creates splits from folders in the input directory
 		splits = {}
 
 		if config.get_option('split_mode') == 'directory':
@@ -83,7 +84,7 @@ class AppLogic:
 	def app_flow(self):
 		# This method contains a state machine for the client and coordinator instance
 		# Coordinator Workflow: 1 -> 2 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9
-		# Client Workflow:      1 -> 3 -> 4 -> 5 -> 7 -> 8
+		# Client Workflow:      1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 8 -> 9
 
 		# === States ===
 		state_initialize = 1
@@ -102,12 +103,15 @@ class AppLogic:
 
 		while True:
 
+			# INITIALIZE THE WORKFLOW
+
 			if state == state_initialize:
 				if self.id is not None:  # Test if setup has happened already
 					config.init()  # initialize config dictionary
 					config.add_option('id', self.id)
 					config.add_option('is_coordinator', self.master)
 					
+					# If config does not exist, wait for correct input in the frontend
 					if check_if_config_file_exists():
 						self.progress = 'parsing config file'
 						read_config(self.master)
@@ -131,7 +135,7 @@ class AppLogic:
 					self.local_models = dict.fromkeys(self.split_expression_data.keys())
 
 					# create temp directory for python <-> R data exchange
-					# TODO create RAMDISK instead
+					# TODO create RAMDISK instead?
 					try:
 						os.makedirs(config.get_option('TEMP_DIR'))
 					except OSError as e:
@@ -139,6 +143,7 @@ class AppLogic:
 							print(f'[CRIT] Could not create temporary directory', flush=True)
 							raise
 
+				# Set Expression Data Sample Size for Model Balancing
 				if self.master:
 					self.data_incoming.append([self.id, get_input_filesizes(self.split_expression_data)])
 					state = state_read_config
@@ -147,9 +152,13 @@ class AppLogic:
 					self.status_available = True
 					state = state_wait_for_config
 
+			# READ CONFIG AND SEND GLOBAL OPTIONS TO CLIENTS
+
 			if state == state_read_config:
 				self.progress = 'sending config'
 
+				# Prepare and Send global options from the configuration to all clients
+				#  including balanced amount of trees to be trained
 				if self.master:
 					print(self.data_incoming, ";; ", str(self.clients))
 					if len(self.data_incoming) == len(self.clients):
@@ -195,8 +204,8 @@ class AppLogic:
 						state = state_read_input
 				else:
 					state = state_wait_for_config
-
-			# LOCAL PART
+				
+			# WAIT FOR CONFIG
 
 			if state == state_wait_for_config:
 				self.progress = 'gathering config'
@@ -211,6 +220,8 @@ class AppLogic:
 					self.data_incoming = []
 					state = state_read_input
 
+			# READ INPUT FILES IN R
+
 			if state == state_read_input:
 				for split in self.split_expression_data.keys():
 					self.split_expression_data[split] = read_input(split + '/' + config.get_option('expression_data_filename'),
@@ -218,10 +229,13 @@ class AppLogic:
 													config.get_option('expression_data_separator'))
 				state = state_local_computation
 
+			# COMPUTE LOCAL MODEL IN R
+
 			if state == state_local_computation:
 				self.progress = 'computing'
 
 				# Check if config is valid
+				#  this could be outsourced to io.py, since the frontend configuration is already checked there
 				if config.get_option('grandforest_method') == "supervised":
 					if config.get_option('grandforest_treetype') == "survival":
 						try:
@@ -254,6 +268,8 @@ class AppLogic:
 
 				state = state_wait_for_global_aggregation
 
+			# WAIT FOR GLOBAL AGGREGATION
+
 			if state == state_wait_for_global_aggregation:
 				if self.master:
 					self.progress = 'gathering models'
@@ -270,7 +286,7 @@ class AppLogic:
 						print(f'[CLIENT] Received result from master', flush=True)
 						state = state_write_results
 
-			# GLOBAL PART
+			# GLOBAL AGGREGATION IN R
 
 			if state == state_global_aggregation:
 				self.progress = 'computing'
@@ -280,6 +296,8 @@ class AppLogic:
 				self.data_outgoing = json.dumps(self.global_models)
 				self.status_available = True
 				state = state_write_results
+
+			# WRITE AND ANALYZE RESULTS IN R
 
 			if state == state_write_results:
 				self.progress = 'writing results'
@@ -296,14 +314,16 @@ class AppLogic:
 					self.data_outgoing = json.dumps('DONE')
 					self.status_available = True
 				state = state_finish
+			
+			# FINISH THE WORKFLOW
 
 			if state == state_finish:
 				self.progress = 'finishing'
 				if self.master:
 					if len(self.data_incoming) == len(self.clients):
+						# FINISH COORDINATOR						
 						print(f'[COORDINATOR] Finished the workflow, exiting...', flush=True)
 						self.status_finished = True
-						# FINISH COORDINATOR
 						break
 				else:
 					# FINISH CIENT
