@@ -65,9 +65,17 @@ plot_patient_clustering_heatmap <- function(expression_data_scaled, clusters) {
 }
 
 
-plot_patient_clustering_survival <- function(clusters, survival.event.name, survival.time.name) {
-  survival_clusters <- data.frame(survival, cluster=clusters)
-  ggsurvplot(survfit(Surv(survival.event.name, survival.time.name)~cluster, data=survival_clusters), pval=TRUE)$plot
+plot_patient_clustering_survival <- function(clusters, survival, survival.event.name, survival.time.name) {
+  ggsurvplot(
+    survfit(
+      Surv(
+        survival %>% dplyr::pull(survival.time.name),
+        survival %>% dplyr::pull(survival.event.name)
+      )~cluster,
+      data=data.frame(survival, cluster=clusters)
+    ),
+    pval=TRUE
+  )$plot
 }
 
 
@@ -105,6 +113,11 @@ top25 <- feature_importances_df %>%
   head(25) %>%
   mutate_if(is.factor, as.character)
 
+if (survival.event.name != 'None' & survival.time.name != 'None') {
+  survival <- as_tibble(expression_data) %>% dplyr::select(c(survival.event.name, survival.time.name))
+  survival <- survival %>% mutate_if(is.double, as.numeric) %>% mutate_if(is.integer, as.numeric)
+}
+
 expression_data <- as_tibble(expression_data) %>% dplyr::select(top25$entrez_id)
 colnames(expression_data) <- as.character(mapIds(org.Hs.eg.db, colnames(expression_data), "SYMBOL", "ENTREZID"))
 print('[R] Scaling Expression Data')
@@ -137,7 +150,7 @@ plot3
 dev.off()
 
 if (survival.event.name != 'None' & survival.time.name != 'None') {
-  plot4 <- plot_patient_clustering_survival(clusters)
+  plot4 <- plot_patient_clustering_survival(clusters, survival, survival.event.name, survival.time.name)
   ggsave(plot=plot4, filename='patient_clustering_survival.svg', device=svg(), path=output_dir)
   ggsave(plot=plot4, filename='patient_clustering_survival.png', device=png(), path=output_dir)
 }
