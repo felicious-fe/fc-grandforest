@@ -55,6 +55,7 @@ plot_top25_subnetwork <- function(top25, interaction_network) {
 
   ggplot(net.df, aes(from_id=from_id, to_id=to_id)) +
     geom_net(aes(colour=importance, label=gene_symbol),
+             ecolour="#bababa", ealpha=0.8,
              directed=FALSE, vjust = -0.8
     ) + theme_net()
 }
