@@ -1,13 +1,13 @@
 #!/bin/bash
 
-if [ ! -d "./grandforest-federalizable" ]; then
-    git clone git@gitlab.com:felicious-fe/grandforest-federalizable
+if [ ! -d "./federated-grandforest-R" ]; then
+    git clone https://gitlab.com/felicious-fe/federated-grandforest-R
 
     if [ $? -eq 0 ]
     then
-	echo "Successfully cloned the grandforest repository."
+	echo "Successfully cloned the federated-grandforest-R repository from GitHub."
     else
-	echo "Script failed! Clould not clone the grandforest federalizable repository. Exiting..." >&2
+	echo "Script failed! Clould not clone the federated-grandforest-R repository from GitHub. Exiting..." >&2
 	exit 1
     fi
 fi
