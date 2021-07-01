@@ -22,7 +22,7 @@ COPY . /app
 
 # INSTALL GRANDFOREST
 # Before executing this Dockerfile, clone the grandforest-federizable repository next to this file.
-RUN R -e "devtools::install(\"/app/grandforest-federalizable\")"
+RUN R -e "devtools::install(\"/app/federated-grandforest-R\")"
 
 RUN pip3 install -r ./app/requirements.txt
 
