@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ ! -d "./federated-grandforest-R" ]; then
-    git clone https://gitlab.com/felicious-fe/federated-grandforest-R
+    git clone https://github.com/felicious-fe/federated-grandforest-R
 
     if [ $? -eq 0 ]
     then
