@@ -52,7 +52,16 @@ plot_top25_subnetwork <- function(top25, interaction_network) {
   subnetwork <- filter(interaction_network, gene1 %in% top25$entrez_id & gene2 %in% top25$entrez_id)
   subnetwork <- as.edgedf(subnetwork)
   net.df <- fortify(subnetwork, top25[ , c("entrez_id", "gene_symbol", "importance")])
-
+  net.df <- net.df %>%
+    distinct() %>%
+    drop_na() %>%
+    # --- DIRTY FIX START ---
+    # Delete all entries that interfere with plotting and cause the application to crash
+    # geomnet v0.3.1 has been removed from CRAN due to those errors, the FeatureCloud
+    # GrandForest Application should probably switch to ggnetwork to plot networks.
+    group_by(from_id) %>%
+    filter(from_id != to_id)
+    # --- DIRTY FIX END ---
   ggplot(net.df, aes(from_id=from_id, to_id=to_id)) +
     geom_net(aes(colour=importance, label=gene_symbol),
              ecolour="#bababa", ealpha=0.8,
@@ -135,12 +144,12 @@ clusters <- kmeans_clustering$cluster
 
 print('[R] Generating plots')
 plot1 <- plot_top25_importances(top25)
-ggsave(plot=plot1, filename='feature_importances.svg', device=svg(), path=output_dir)
-ggsave(plot=plot1, filename='feature_importances.png', device=png(), path=output_dir)
+try(ggsave(plot=plot1, filename='feature_importances.svg', device=svg(), path=output_dir))
+try(ggsave(plot=plot1, filename='feature_importances.png', device=png(), path=output_dir))
 
 plot2 <- plot_top25_subnetwork(top25, interaction_network)
-ggsave(plot=plot2, filename='interaction_subnetwork.svg', device=svg(), path=output_dir)
-ggsave(plot=plot2, filename='interaction_subnetwork.png', device=png(), path=output_dir)
+try(ggsave(plot=plot2, filename='interaction_subnetwork.svg', device=svg(), path=output_dir))
+try(ggsave(plot=plot2, filename='interaction_subnetwork.png', device=png(), path=output_dir))
 
 plot3 <- plot_patient_clustering_heatmap(expression_data_scaled, clusters)
 svg(paste(output_dir, 'patient_clustering_heatmap.svg', sep=""))

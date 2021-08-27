@@ -160,7 +160,7 @@ class AppLogic:
 				# Prepare and Send global options from the configuration to all clients
 				#  including balanced amount of trees to be trained
 				if self.master:
-					print(self.data_incoming, ";; ", str(self.clients))
+					print("[MASTER] Received Data from ", len(self.data_incoming), " of ", str(self.clients), "clients.")
 					if len(self.data_incoming) == len(self.clients):
 						print(f'[CLIENT] Received all client expression data filesizes.', flush=True)
 						filesizes_combined = dict()

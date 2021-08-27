@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.8-bullseye
 
 # Install required system packages and python modules
 RUN apt-get update && apt-get install -y supervisor nginx
