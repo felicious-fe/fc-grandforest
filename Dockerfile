@@ -10,7 +10,7 @@ RUN pip3 install gunicorn
 RUN apt-get update && apt-get install -y libtool r-cran-devtools r-cran-tidyverse r-cran-svglite r-cran-biocmanager r-cran-survival r-cran-nloptr
 RUN R -e "BiocManager::install(\"org.Hs.eg.db\", update = FALSE, ask = FALSE)"
 RUN R -e "BiocManager::install(\"ComplexHeatmap\", update = FALSE, ask = FALSE)"
-RUN R -e "devtools::install_version(\"geomnet\", version = \"0.3.1\", repos = \"http://cran.us.r-project.org\")"
+RUN R -e "install.packages(\"geomnet\")"
 RUN R -e "install.packages(\"survminer\")"
 
 

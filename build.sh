@@ -13,6 +13,6 @@ if [ ! -d "./federated-grandforest-R" ]; then
 fi
 
 echo "Building docker image..."
-docker build . --tag fc_grandforest
+docker build . --tag featurecloud.ai/fc_grandforest
 
 
